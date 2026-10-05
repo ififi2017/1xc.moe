@@ -337,10 +337,23 @@ soundBtn.addEventListener('click', () => {
 });
 
 function unlockAudio() {
+  // iOS 17+: play through the ring/silent switch like a media player would
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
   if (!audio) {
     try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
   }
-  if (audio.state === 'suspended') audio.resume();
+  if (audio.state !== 'running') {
+    audio.resume().catch(() => {});
+    // older iOS only opens the output after a buffer is started inside a gesture
+    const src = audio.createBufferSource();
+    src.buffer = audio.createBuffer(1, 1, 22050);
+    src.connect(audio.destination);
+    src.start(0);
+  }
+}
+// iOS WebKit doesn't count pointerdown as a user gesture for audio — touchend/click do
+for (const type of ['touchend', 'click']) {
+  window.addEventListener(type, unlockAudio, { passive: true, capture: true });
 }
 
 function tone(type, f0, f1, f2, dur, vol) {
@@ -513,20 +526,29 @@ document.querySelectorAll('.logo span').forEach((el) => {
 /* ------------------------------------------------------------------ */
 /* layout                                                              */
 /* ------------------------------------------------------------------ */
+const heroEl = $('.hero');
 function resize() {
   const w = innerWidth, h = innerHeight;
+  if (!w || !h) return; // hidden tab / zero-size frame: keep the last good camera
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
+  // fit the friends into the space between the top bar and the title
+  const top = 72;
+  const bottom = Math.max(top + 140, heroEl.getBoundingClientRect().top - 8);
+  const avail = bottom - top;
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const halfW = camera.aspect < 0.7 ? 3.0 : 3.25, halfH = 2.55;
-  const dist = Math.max(halfH / t, halfW / (t * camera.aspect));
+  const halfW = camera.aspect < 0.7 ? 3.0 : 3.25;
+  const fitH = 3.0; // world units: ground shadows → just above the tallest head
+  const dist = Math.max((fitH * h) / (2 * t * avail), halfW / (t * camera.aspect), 9);
   camBase.set(0, 1.9 + dist * 0.02, dist);
-  // push the friends up a bit so the title has room underneath
-  camLook.y = 0.6 + clamp((dist - 10) * 0.1, 0, 1.5);
+  camLook.y = 1.2;
+  // shift the projection so the scene's centre lands in the middle of that space
+  camera.setViewOffset(w, h, 0, h / 2 - (top + bottom) / 2, w, h);
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
 resize();
+document.fonts?.ready.then(resize);
 
 /* ------------------------------------------------------------------ */
 /* loop                                                                */
@@ -659,6 +681,7 @@ renderer.setAnimationLoop(() => {
   }
 
   // gentle parallax
+  if (!Number.isFinite(camPos.x + camPos.y)) camPos.copy(camBase);
   camPos.x = damp(camPos.x, camBase.x + pointer.x * 0.45, 3, dt);
   camPos.y = damp(camPos.y, camBase.y + pointer.y * 0.3, 3, dt);
   camPos.z = camBase.z;
