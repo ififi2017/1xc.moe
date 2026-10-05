@@ -14,6 +14,10 @@
   --glass: rgba(255, 255, 255, 0.72);
   --glass-line: rgba(255, 170, 200, 0.45);
   --card: rgba(255, 255, 255, 0.78);
+  /* Chinese text always comes from one system CJK font. M PLUS Rounded 1c (a
+     Japanese font) lacked characters like 嘿/喵/恁/啥, so lines mixed two fonts
+     with different weights. Fredoka still handles Latin letters and digits. */
+  --font-text: "Fredoka", "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
   color-scheme: light;
 }
 
@@ -24,7 +28,7 @@ html, body {
   margin: 0;
   background: var(--bg1);
   color: var(--ink);
-  font-family: "M PLUS Rounded 1c", "Fredoka", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: var(--font-text);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -281,7 +285,7 @@ body.ready #loader { opacity: 0; pointer-events: none; }
 }
 .logo {
   margin: 0;
-  font-family: "Fredoka", "M PLUS Rounded 1c", sans-serif;
+  font-family: var(--font-text);
   font-weight: 700;
   font-size: clamp(52px, 9vw, 108px);
   line-height: 1;
@@ -429,7 +433,7 @@ kbd {
 }
 .skill h2 {
   margin: 6px 0 0;
-  font-family: "Fredoka", "M PLUS Rounded 1c", sans-serif;
+  font-family: var(--font-text);
   font-weight: 700;
   font-size: clamp(32px, 5vw, 48px);
   line-height: 1.1;
@@ -484,7 +488,7 @@ kbd {
   padding-right: 96px;
   white-space: pre-wrap;
   word-break: break-word;
-  font: 500 14px/1.7 "M PLUS Rounded 1c", "PingFang SC", system-ui, sans-serif;
+  font: 500 14px/1.7 var(--font-text);
   color: var(--ink);
   user-select: text;
 }
