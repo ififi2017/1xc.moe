@@ -1,13 +1,12 @@
 // Tiny synth — every sound is generated, no audio files.
 let ctx = null;
 let muted = false;
-let purrGain = null;
 
 export const isMuted = () => muted;
 export function setMuted(m) {
   muted = m;
   if (!m) unlock();
-  if (purrGain && ctx) purrGain.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+  if (purr.bus && ctx) purr.bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
 }
 
 export function unlock() {
@@ -99,34 +98,81 @@ export function ding() {
   }
 }
 
-// 呼噜 — low-passed noise, amplitude-modulated at ~24 Hz, faded in while petting
+// 呼噜 — a low, voiced "咕噜噜" rather than chopped noise (chopped noise reads
+// as a helicopter). Each breath is a hum on a fixed 25 Hz fundamental with its
+// harmonics shaped around 80–160 Hz and only a slow, slight pitch drift; the
+// out-breath is longer and louder, the in-breath shorter and softer, with a
+// pause in between. Exactly one breath plays at a time and the tempo never
+// changes: petting harder or longer only raises the volume, up to a cap.
+const PURR_F0 = 25;
+const purr = { bus: null, out: [], in: [], next: 0, exhale: true, queued: [] };
+
+function renderBreath(seconds, loud) {
+  const sr = ctx.sampleRate;
+  const n = Math.floor(seconds * sr);
+  const buf = ctx.createBuffer(1, n, sr);
+  const d = buf.getChannelData(0);
+  const phases = Array.from({ length: 14 }, () => Math.random() * Math.PI * 2);
+  const drift = Math.random() * Math.PI * 2;
+  let ph = 0, peak = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    ph += (2 * Math.PI * PURR_F0 * (1 + 0.02 * Math.sin(2 * Math.PI * 0.7 * t + drift))) / sr;
+    let v = 0;
+    for (let k = 1; k <= 14; k++) {
+      const f = k * PURR_F0;
+      const g = Math.exp(-(((f - 110) / 90) ** 2)) + 0.25 * Math.exp(-(((f - 30) / 15) ** 2));
+      v += (g / Math.sqrt(k)) * Math.sin(k * ph + phases[k - 1]);
+    }
+    // breath envelope: ease in, hold, ease out — no clicks between breaths
+    const x = i / n;
+    v *= Math.sin((Math.PI * Math.min(1, x / 0.25)) / 2) ** 2 * Math.cos((Math.PI * Math.max(0, (x - 0.6) / 0.4)) / 2) ** 2;
+    d[i] = v;
+    peak = Math.max(peak, Math.abs(v));
+  }
+  const norm = (0.5 * loud) / (peak || 1);
+  for (let i = 0; i < n; i++) d[i] *= norm;
+  return buf;
+}
+
 function setupPurr() {
-  const len = ctx.sampleRate * 2;
-  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; data[i] = last * 3.5; }
-  const noise = ctx.createBufferSource();
-  noise.buffer = buf;
-  noise.loop = true;
-  const lp = ctx.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = 320;
-  const mod = ctx.createGain();
-  mod.gain.value = 0.5;
-  const lfo = ctx.createOscillator();
-  lfo.frequency.value = 24;
-  const lfoDepth = ctx.createGain();
-  lfoDepth.gain.value = 0.5;
-  lfo.connect(lfoDepth).connect(mod.gain);
-  purrGain = ctx.createGain();
-  purrGain.gain.value = 0;
-  noise.connect(lp).connect(mod).connect(purrGain).connect(ctx.destination);
-  noise.start();
-  lfo.start();
+  purr.bus = ctx.createGain();
+  purr.bus.gain.value = 0;
+  purr.bus.connect(ctx.destination);
+  for (let k = 0; k < 3; k++) {
+    purr.out.push(renderBreath(1.2 + k * 0.12, 1));
+    purr.in.push(renderBreath(0.75 + k * 0.08, 0.55));
+  }
+}
+
+function stopQueuedPurr(now) {
+  // cancel breaths that haven't started yet; the one already playing fades with the bus
+  purr.queued = purr.queued.filter(({ src, start }) => {
+    if (start > now) { try { src.stop(); } catch {} return false; }
+    return start + src.buffer.duration > now;
+  });
+  const playing = purr.queued[purr.queued.length - 1];
+  purr.next = playing ? playing.start + playing.src.buffer.duration : 0;
+  purr.exhale = true;
 }
 
 export function setPurr(level) {
-  if (!ctx || !purrGain) return;
-  purrGain.gain.setTargetAtTime(muted ? 0 : level * 0.9, ctx.currentTime, 0.12);
+  if (!ctx || !purr.bus) return;
+  const now = ctx.currentTime;
+  const target = muted ? 0 : Math.min(1, Math.max(0, level));
+  purr.bus.gain.setTargetAtTime(target * 0.6, now, 0.3);
+  if (target < 0.04) { if (purr.queued.length) stopQueuedPurr(now); return; }
+  if (purr.next < now) purr.next = now + 0.03;
+  // keep at most one breath queued ahead of the one playing: never overlapping, never faster
+  while (purr.next - now < 0.3) {
+    const list = purr.exhale ? purr.out : purr.in;
+    const src = ctx.createBufferSource();
+    src.buffer = list[(Math.random() * list.length) | 0];
+    src.connect(purr.bus);
+    src.start(purr.next);
+    purr.queued.push({ src, start: purr.next });
+    src.onended = () => { purr.queued = purr.queued.filter((q) => q.src !== src); };
+    purr.next += src.buffer.duration + (purr.exhale ? 0.12 : 0.22);
+    purr.exhale = !purr.exhale;
+  }
 }
