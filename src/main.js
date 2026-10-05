@@ -11,13 +11,15 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+  || (import.meta.env.DEV && new URLSearchParams(location.search).has('reduced'));
 
 const hero = $('.hero');
 const canvas = $('#stage');
 const cat = new SpriteCharacter({ reduceMotion });
 const stage = createSpriteStage(canvas, cat, { reduceMotion });
 let ready = false;
+let debugControls;
 
 /* ------------------------------------------------------------------ */
 /* dialect & speech                                                    */
@@ -111,8 +113,7 @@ function activity() {
   lonely = 0;
   wokeAt = performance.now();
   cat.setLonely(0);
-  cat.setExpr('happy', 1.2);
-  cat.poke(0.7, false);
+  cat.wave();
   say(line('back'), 2.4, true);
   sfx.meow(1.1);
 }
@@ -124,7 +125,7 @@ function tickLonely(dt) {
   lonely++;
   cat.setLonely(lonely);
   say((LINES[dialect].lonely ?? LINES.henan.lonely)[lonely - 1], 3.4);
-  if (lonely === 1) { cat.wave(); cat.poke(0.5, false); }
+  if (lonely === 1) cat.poke(0.5);
   if (lonely < 5) sfx.meow(lonely >= 3 ? 0.82 : 1);
 }
 
@@ -189,7 +190,7 @@ function heartRain() {
         { x: rand(-15, 15), y: rand(25, 60) }, { life: 4, size: rand(14, 26), gravity: 15 });
     }, i * 55);
   }
-  cat.setExpr('happy', 1.6);
+  cat.celebrate();
   setTimeout(() => say(line('rain')), 400);
   addMoe(5);
 }
@@ -329,8 +330,8 @@ function animate(now) {
     cat.wave();
     say(line('greet'), 2.6);
   }
-  tickLonely(dt);
-  cat.update(dt, sayT > 0);
+  if (!debugControls?.holding) tickLonely(dt);
+  cat.update(dt, sayT > 0 || debugControls?.talking);
   sfx.setPurr(Math.max(0, cat.pet - 0.15));
   petCooldown -= dt;
   if (cat.sleeping) {
@@ -363,6 +364,7 @@ async function loadCharacter() {
     await stage.init();
     ready = true;
     document.body.classList.add('ready');
+    stage.preload();
     document.querySelectorAll('[data-pet]').forEach((button) => { button.disabled = false; });
   } catch (cause) {
     console.error('立绘加载失败', cause);
@@ -381,4 +383,17 @@ if (import.meta.env.DEV) {
     skipQuiet(sec) { quiet += sec; },
     state: () => ({ ready, sprite: cat.frame, loaded: stage.loaded, lonely, quiet: +quiet.toFixed(1), dialect, sayT: +sayT.toFixed(2), text: bubbleText.textContent }),
   };
+  if (new URLSearchParams(location.search).has('sprite-test')) {
+    const panel=document.createElement('details');
+    panel.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;z-index:9999;padding:10px;background:#fff5f9ed;border:1px solid #e3cbdc;border-radius:12px;color:#604758;font:12px system-ui';
+    panel.open=true;
+    const title=document.createElement('summary'); title.textContent='姿势验收（仅开发环境）';
+    const controls=document.createElement('div'); controls.style.cssText='display:flex;gap:7px;flex-wrap:wrap;padding-top:8px';
+    panel.append(title,controls); document.body.append(panel);
+    import('./sprite-debug.js').then(({attachSpriteControls}) => {
+      debugControls=attachSpriteControls(controls,cat,stage,{wake:() => {activity();cat.setLonely(0);},heartRain});
+    });
+    canvas.addEventListener('pointermove',() => { canvas.dataset.hit=zoneAt()?.zone??'transparent'; });
+    canvas.addEventListener('pointerdown',() => { canvas.dataset.hit=zoneAt()?.zone??'transparent'; });
+  }
 }

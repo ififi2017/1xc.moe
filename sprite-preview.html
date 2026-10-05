@@ -1,37 +1,38 @@
 <!doctype html>
 <html lang="zh-CN">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>立绘分层校准</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1xc · 姿势与表情校准</title>
 <style>
-body { margin: 24px; color: #604758; background: #fff5f9; font: 15px system-ui; }
-h1 { font-size: 22px; } main { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-figure { margin: 0; padding: 12px; border: 1px solid #e3cbdc; border-radius: 16px; background: #fbf5ff; }
-canvas { width: 100%; height: auto; } figcaption { text-align: center; }
+*{box-sizing:border-box}body{margin:24px;color:#604758;background:#fff5f9;font:15px system-ui}h1{font-size:24px}nav{display:flex;gap:14px;flex-wrap:wrap;position:sticky;top:0;background:#fff5f9ec;padding:12px 0;z-index:1}a{color:#91637d}section{scroll-margin-top:60px;margin:32px 0}section h2{font-size:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px}figure{margin:0;padding:10px;border:1px solid #e3cbdc;border-radius:16px;background:#fbf5ff}canvas{display:block;width:100%;height:auto}figcaption{text-align:center;padding:8px 0}.error{color:#ac304b}.tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}button{padding:9px 14px;border:1px solid #dcc0d3;background:white;color:inherit;border-radius:12px;cursor:pointer}#live{height:580px;max-width:720px;margin:auto;position:relative}#live canvas{width:100%;height:100%}output{font:13px monospace}details{margin-top:20px}summary{cursor:pointer}@media(max-width:500px){body{margin:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}figcaption{font-size:12px}#live{height:470px}}
 </style>
-<h1>立绘分层校准 · 12 种表情</h1>
-<p>开发预览：无五官底图 → 表情图集 → 前景刘海。主站只加载这三张图。</p>
+<h1>姿势与表情校准</h1>
+<p>每套原稿 → 无脸底图 + 专属表情图集 + 原稿刘海。点选姿势后逐张检查眼睛、嘴与刘海边缘。</p>
+<nav><a href="#idle">待机</a><a href="#wave">挥手</a><a href="#paws">托腮</a><a href="#cheer">欢呼</a><a href="#tail">抱尾巴</a><a href="#animation">动作测试</a></nav>
+<div class="tools"><label><input id="closeup" type="checkbox" checked> 面部放大</label><label><input id="baseOnly" type="checkbox"> 只看无脸底图</label></div>
 <main></main>
+<section id="animation"><h2>动作、眨眼、说话与命中区域</h2><div id="controls"></div><div id="live"><canvas id="stage"></canvas></div><output id="state"></output></section>
 <script type="module">
-import { LAYERS, drawCharacter } from './src/sprite-art.js';
-const layers = new Map();
-await Promise.all(LAYERS.map(async name => {
-  const image = new Image();
-  image.src = `/sprites/layers/${name}.webp`;
-  await image.decode();
-  layers.set(name, image);
-}));
-const reference = new Image(); reference.src = '/sprites/layers/hair_front.webp'; await reference.decode();
-const reviewOrder = ['idle_coax', 'idle_smile', 'idle_shy', 'idle_talk', 'idle_surprised', 'idle_content', 'idle_sleep', 'idle_wink', 'idle_blink', 'idle_happy', 'idle_pout', 'idle_sulky'];
-for (const frame of ['原图对照', ...reviewOrder]) {
-  const figure = document.createElement('figure');
-  const canvas = document.createElement('canvas');
-  canvas.width = 640; canvas.height = 640;
-  const ctx = canvas.getContext('2d');
-  ctx.translate(-190, -10);
-  if (frame === '原图对照') ctx.drawImage(reference, 0, 0); else drawCharacter(ctx, layers, frame);
-  const label = document.createElement('figcaption'); label.textContent = frame;
-  figure.append(canvas, label); document.querySelector('main').append(figure);
+import { POSES,drawCharacter } from './src/sprite-art.js';
+import { SpriteCharacter } from './src/sprite-character.js';
+import { createSpriteStage } from './src/sprite-stage.js';
+import { attachSpriteControls } from './src/sprite-debug.js';
+const cards=[];
+function paint(){for(const {canvas,layers,pose,frame} of cards){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();if(document.querySelector('#closeup').checked){ctx.scale(.9,.9);ctx.translate(-260,-105);}else ctx.scale(canvas.width/1024,canvas.height/1536);if(frame==='原稿对照')ctx.drawImage(layers.get('hair_front'),0,0);else if(document.querySelector('#baseOnly').checked)ctx.drawImage(layers.get('base'),0,0);else drawCharacter(ctx,layers,frame,0,pose);ctx.restore();}}
+for(const [pose,config] of Object.entries(POSES)){
+ const section=document.createElement('section');section.id=pose;
+ const heading=document.createElement('h2');heading.textContent=`${config.label} · ${pose} · ${Object.keys(config.frames).length} 种表情`;
+ const grid=document.createElement('div');grid.className='grid';section.append(heading,grid);document.querySelector('main').append(section);
+ try{
+ const layers=new Map(await Promise.all(Object.entries(config.layers).map(async([key,path])=>{const im=new Image();im.src=path;await im.decode();return[key,im]})));
+ for(const frame of ['原稿对照',...Object.keys(config.frames)]){const figure=document.createElement('figure'),canvas=document.createElement('canvas'),label=document.createElement('figcaption');canvas.width=460;canvas.height=560;label.textContent=frame==='原稿对照'?`${pose} 原稿对照`:`${pose}_${frame}`;figure.append(canvas,label);grid.append(figure);cards.push({canvas,layers,pose,frame});}
+ }catch(error){section.className='error';section.append(String(error));}
 }
+paint();document.querySelector('#closeup').onchange=paint;document.querySelector('#baseOnly').onchange=paint;
+const cat=new SpriteCharacter(),canvas=document.querySelector('#stage'),stage=createSpriteStage(canvas,cat);
+await stage.init();stage.preload();
+const controls=attachSpriteControls(document.querySelector('#controls'),cat,stage);
+function resize(){const r=canvas.parentElement.getBoundingClientRect();stage.resize(r.width,r.height,5,r.height-5)}new ResizeObserver(resize).observe(canvas.parentElement);resize();
+canvas.addEventListener('pointermove',event=>{const r=canvas.getBoundingClientRect();canvas.dataset.hit=stage.zoneAt({x:event.clientX-r.left,y:event.clientY-r.top})?.zone??'transparent'});
+let previous=performance.now();function tick(now){const dt=Math.min(.033,(now-previous)/1000);previous=now;cat.update(dt,controls.talking);const bounds=canvas.getBoundingClientRect();if(bounds.top<innerHeight && bounds.bottom>0)stage.draw(dt);document.querySelector('#state').textContent=JSON.stringify({...canvas.dataset,loaded:stage.loaded});requestAnimationFrame(tick)}requestAnimationFrame(tick);
 </script>
 </html>

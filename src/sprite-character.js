@@ -1,4 +1,4 @@
-import { FACE_FRAMES } from './sprite-art.js';
+import { FACE_FRAMES, POSES } from './sprite-art.js';
 export const SPRITES = Object.keys(FACE_FRAMES);
 
 const EXPRESSIONS = {
@@ -25,20 +25,40 @@ export class SpriteCharacter {
     this.motion = 'idle';
     this.motionTime = 0;
     this.motionDuration = 0;
+    this.temporaryPose = null;
+    this.deferPoseTimers = false;
+    this.presentedPose = 'idle';
+    this.channels = { blink:false, talk:false };
+    this.expressionFrame = 'idle_smile';
   }
 
   get sleeping() { return this.lonely >= 5; }
+  get pose() {
+    if (this.sleeping) return 'idle';
+    return this.temporaryPose?.name ?? (this.lonely >= 3 ? 'tail' : this.lonely > 0 ? 'paws' : 'idle');
+  }
+  // Sleep > celebration > touch > greeting > persistent loneliness.
+  requestPose(name, seconds, priority) {
+    if (!POSES[name]) throw new Error(`Unknown pose: ${name}`);
+    if (this.sleeping || (this.temporaryPose && this.temporaryPose.priority > priority)) return false;
+    this.temporaryPose = { name, remaining:seconds, priority };
+    return true;
+  }
+  presentPose(name) { this.presentedPose = name; }
+
 
   setLonely(level) {
-    this.lonely = level;
+    this.lonely = Math.max(0, Math.min(5, level));
+    this.temporaryPose = null;
     this.expressionTime = 0;
     this.pet = 0;
     this.motionTime = 0;
   }
 
   setExpr(name, duration = 1.6) {
-    this.expression = EXPRESSIONS[name] ?? name;
+    this.expression = EXPRESSIONS[name] ?? (name.startsWith('idle_') ? name : `idle_${name}`);
     this.expressionTime = duration;
+    if (['content', 'coax', 'shy'].includes(name)) this.requestPose('paws', duration, 20);
   }
 
   poke(strength = 1) {
@@ -46,13 +66,14 @@ export class SpriteCharacter {
   }
 
   playMotion(name, duration = 1.2) { this.motion = name; this.motionTime = this.motionDuration = duration; }
-  wave() { this.setExpr('happy', 1.2); this.playMotion('greet'); this.poke(0.5); }
+  wave() { if (!this.requestPose('wave', 1.6, 10)) return; this.setExpr('smile', 1.6); this.playMotion('greet', 1.6); this.poke(0.5); }
   wink() { this.setExpr('wink', 1.6); this.playMotion('tilt'); }
-  celebrate() { this.setExpr('happy', 2.6); this.playMotion('celebrate', 2.6); this.poke(1.2); }
+  celebrate() { if (!this.requestPose('cheer', 2.6, 30)) return; this.setExpr('happy', 2.6); this.playMotion('celebrate', 2.6); this.poke(1.2); }
   petTick() {
+    if (!this.requestPose('paws', 1.5, 20)) return;
     this.pet = Math.min(1, this.pet + 0.45);
-    this.setExpr('content', 1.8);
-    this.playMotion('nuzzle', 1.8);
+    this.setExpr('content', 1.5);
+    this.playMotion('nuzzle', 1.5);
   }
 
   react(zone) {
@@ -64,6 +85,10 @@ export class SpriteCharacter {
 
   update(dt, talking = false) {
     this.time += dt;
+    if (this.temporaryPose && (!this.deferPoseTimers || this.presentedPose === this.pose)) {
+      this.temporaryPose.remaining -= dt;
+      if (this.temporaryPose.remaining <= 0) this.temporaryPose = null;
+    }
     this.motionTime = Math.max(0, this.motionTime - dt);
     this.expressionTime = Math.max(0, this.expressionTime - dt);
     this.pet = Math.max(0, this.pet - dt * 0.28);
@@ -86,6 +111,13 @@ export class SpriteCharacter {
       : this.blinkTime > 0 ? 'idle_blink'
       : talking && Math.floor(this.time / 0.18) % 2 === 0 ? 'idle_talk'
       : 'idle_smile';
+    this.expressionFrame = this.sleeping ? 'idle_sleep'
+      : this.expressionTime > 0 ? this.expression
+      : this.pose === 'tail' ? 'idle_sulky'
+      : this.pose === 'paws' ? (this.lonely ? 'idle_coax' : 'idle_content')
+      : this.pose === 'cheer' ? 'idle_happy' : 'idle_smile';
+    this.channels = { blink:!this.sleeping && this.blinkTime > 0,
+      talk:!this.sleeping && talking && Math.floor(this.time / 0.18) % 2 === 0 };
     return this.frame;
   }
 
@@ -131,14 +163,25 @@ export function unprojectPoint(point, transform) {
   return { x: (x * c + y * s) / transform.width + 0.5, y: (-x * s + y * c) / transform.height + 1 };
 }
 
-export function spriteZone({ x, y }) {
-  const ellipse = (cx, cy, rx, ry) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+export function spriteZone({ x, y }, pose = 'idle') {
   if (x < 0 || y < 0 || x > 1 || y > 1) return null;
-  if (ellipse(0.5, 0.367, 0.045, 0.03)) return 'bell';
-  if (ellipse(0.48, 0.315, 0.115, 0.026)) return 'chin';
-  if (ellipse(0.40, 0.276, 0.035, 0.014) || ellipse(0.56, 0.252, 0.035, 0.014)) return 'cheek';
-  if (y < 0.175 && (x < 0.34 || x > 0.565)) return 'ear';
-  if (ellipse(0.46, 0.20, 0.29, 0.17)) return 'head';
-  if (x > 0.80 && y > 0.47 && y < 0.88) return 'tail';
+  x *= 1024; y *= 1536;
+  for (const region of POSES[pose].zones) {
+    if (region.polygon) {
+      let inside=false;
+      const points=region.polygon;
+      for(let i=0,j=points.length-1;i<points.length;j=i++) {
+        const [xi,yi]=points[i], [xj,yj]=points[j];
+        if ((yi>y)!==(yj>y) && x<(xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside;
+      }
+      if (inside) return region.zone;
+    } else if (region.ellipse) {
+      const [cx,cy,rx,ry] = region.ellipse;
+      if (((x-cx)/rx)**2 + ((y-cy)/ry)**2 <= 1) return region.zone;
+    } else {
+      const [left,top,width,height] = region.rect;
+      if (x >= left && x <= left+width && y >= top && y <= top+height) return region.zone;
+    }
+  }
   return 'body';
 }

@@ -1,0 +1,11 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>立绘尺寸验收</title>
+<style>body{margin:16px;background:#f7edf3;color:#604758;font:14px system-ui}nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}button,a{padding:8px;color:inherit}#viewport{transform-origin:top left}iframe{display:block;border:1px solid #d8b8ce;border-radius:12px;background:#fff5f9}</style>
+<nav><button data-size="mobile">手机 375×812</button><button data-size="desktop">桌面 1280×800</button><label><input type="checkbox" id="reduced">减少动态效果</label><label><input type="checkbox" id="actual">原尺寸查看</label><a href="/sprite-preview.html">全部表情对照</a><output></output></nav>
+<div id="viewport"><iframe title="主站尺寸验收" width="375" height="812" src="/?sprite-test=1"></iframe></div>
+<script type="module">
+const frame=document.querySelector('iframe'),viewport=document.querySelector('#viewport');let size='mobile';
+function fit(){const width=size==='mobile'?375:1280,height=size==='mobile'?812:800;frame.width=width;frame.height=height;const scale=document.querySelector('#actual').checked?1:Math.min(1,(innerWidth-32)/width);viewport.style.transform=`scale(${scale})`;viewport.style.width=`${width}px`;viewport.style.height=`${height*scale}px`;document.querySelector('output').textContent=`实际 iframe 视口 ${width}×${height}，显示比例 ${Math.round(scale*100)}%`;}
+document.querySelectorAll('[data-size]').forEach(button=>button.onclick=()=>{size=button.dataset.size;fit()});
+document.querySelector('#reduced').onchange=event=>{frame.src=`/?sprite-test=1${event.target.checked?'&reduced=1':''}`};
+document.querySelector('#actual').onchange=fit;addEventListener('resize',fit);fit();
+</script></html>
