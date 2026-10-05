@@ -1,12 +1,34 @@
 # 1xc.moe
 
-一小撮软乎乎的萌物 —— 「1」「x」「c」三只 3D 果冻小家伙。纯静态页面（Three.js via CDN），无需构建。
+河南猫娘「猫猫」的小窝 —— 一只用 Three.js 从零手搓的 3D Q 版猫娘。角色设定来自 [hybrid-catgirl-skill](https://github.com/ififi2017/hybrid-catgirl-skill)。
 
-- 本地预览：`python3 -m http.server 5173 -d public`
-- 部署（Cloudflare Workers 静态资源）：`npx wrangler deploy`
+- **rua 系统**：摸头、挠下巴、碰耳朵、甩尾巴、戳铃铛，各有不同反应（全部限于 L1–L3）
+- **七种方言**：河南（默认）、北京、四川、东北、天津、中日双语、普通话
+- **寂寞小猫**：一段时间不理她，会递进地喊你，最后睡着冒 Zzz
+- **彩蛋**：键盘敲 `1xc` / `moe` / `nya`
+
+## 开发
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # 输出到 dist/
+```
+
+技术栈：Vite + 原生 JS + Three.js，所有音效都是 Web Audio 实时合成的，没有音频文件。
+
+| 文件 | 内容 |
+|---|---|
+| `src/catgirl.js` | 猫猫的模型、表情、物理和动画 |
+| `src/lines.js` | 七种方言的台词 |
+| `src/stage.js` | 渲染器、灯光、漂浮物、粒子 |
+| `src/audio.js` | 合成音效（喵、铃铛、呼噜） |
+| `src/main.js` | 交互、寂寞小猫计时、方言切换、彩蛋 |
+
+开发模式下控制台里有 `window.__1xc` 调试接口（生产构建会去掉）。
 
 ## 发布流程
 
-从 `main` 开新分支 → 提 PR（CI 会跑一次 `wrangler deploy --dry-run` 检查）→ 合并到 `main` 后 GitHub Actions 自动部署到 1xc.moe。
+从 `main` 开新分支 → 提 PR（CI 会构建并跑一次 `wrangler deploy --dry-run`）→ 合并到 `main` 后 GitHub Actions 自动部署到 1xc.moe（Cloudflare Workers 静态资源）。
 
 需要的仓库 Secrets：`CLOUDFLARE_API_TOKEN`（模板「Edit Cloudflare Workers」）、`CLOUDFLARE_ACCOUNT_ID`。

@@ -1,0 +1,20 @@
+{
+  "name": "1xc-moe",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "河南猫娘「猫猫」的小窝",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2",
+    "wrangler": "^4.147.0"
+  }
+}
