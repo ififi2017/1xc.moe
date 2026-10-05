@@ -2,5 +2,5 @@
 node_modules/
 dist/
 .wrangler/
-.claude/settings.local.json
+.claude/
 .cache/
