@@ -54,6 +54,8 @@ function tone(type, f0, f1, f2, dur, vol, when = 0) {
 }
 
 export const blip = (f = 660) => { tone('sine', f, f * 1.9, f * 1.3, 0.24, 0.2); tone('triangle', f * 2, f * 3.6, f * 2.4, 0.14, 0.04); };
+// one syllable of 猫猫's "voice": a clipped version of the bubble blip
+export const voice = (f = 680) => { tone('sine', f, f * 1.45, f * 1.15, 0.075, 0.085); tone('triangle', f * 2, f * 2.8, f * 2.2, 0.05, 0.015); };
 export const plop = () => tone('sine', 260, 170, 120, 0.12, 0.11);
 export const sparkle = () => tone('sine', 1300, 1900, 1600, 0.12, 0.05);
 

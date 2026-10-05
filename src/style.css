@@ -388,6 +388,17 @@ kbd {
 @keyframes nudge { 50% { transform: translateY(3px); } }
 
 /* ---------- speech bubble ---------- */
+/* typewriter: the unsaid part keeps its space so the bubble never resizes */
+.bubble .rest { visibility: hidden; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 .bubble {
   position: absolute;
   left: 0;
@@ -396,7 +407,7 @@ kbd {
   will-change: transform;
   --col: var(--c);
 }
-.bubble span {
+.bubble > span {
   position: relative;
   display: block;
   transform: translate(-50%, -100%) scale(0.2);
@@ -415,7 +426,7 @@ kbd {
   box-shadow: 0 8px 20px rgba(190, 100, 160, 0.18);
   transition: transform 0.28s cubic-bezier(0.3, 1.7, 0.5, 1), opacity 0.18s;
 }
-.bubble span::after {
+.bubble > span::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -428,7 +439,7 @@ kbd {
   transform: translateX(-50%) rotate(45deg);
   border-bottom-right-radius: 3px;
 }
-.bubble.show span {
+.bubble.show > span {
   transform: translate(-50%, -100%) scale(1);
   opacity: 1;
 }
@@ -569,6 +580,6 @@ button.chip:hover { background: #fff; }
 button.chip:focus-visible { outline: 3px solid var(--c); outline-offset: 3px; }
 button.chip:disabled { opacity: 0.5; cursor: wait; }
 @media (prefers-reduced-motion: reduce) {
-  #stage, .bubble span { transition: none; }
+  #stage, .bubble > span { transition: none; }
   #loader i, .logo span.boing, .meter b.pop { animation: none; }
 }

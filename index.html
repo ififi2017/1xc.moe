@@ -40,7 +40,8 @@
 
   <section class="hero" id="home">
     <canvas id="stage" role="img" aria-label="猫娘猫猫的互动立绘：可以摸头、挠下巴、碰耳朵和尾巴、戳铃铛"></canvas>
-    <div id="bubble" class="bubble" aria-live="polite"><span></span></div>
+    <div id="bubble" class="bubble" aria-hidden="true"><span><span class="said"></span><span class="rest"></span></span></div>
+    <p id="bubbleSr" class="sr-only" aria-live="polite"></p>
     <div id="loader" aria-hidden="true"><i></i><i></i><i></i></div>
 
     <div id="spriteError" class="sprite-error" role="status" hidden>
