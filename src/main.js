@@ -3,6 +3,7 @@ import { createSpriteStage } from './sprite-stage.js';
 import { SpriteCharacter } from './sprite-character.js';
 import { DIALECTS, LINES } from './lines.js';
 import * as sfx from './audio.js';
+import { speechPlan, VOICE_STEPS } from './speech.js';
 
 const $ = (s) => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -33,14 +34,46 @@ const line = (key) => {
 
 const bubble = $('#bubble');
 const bubbleText = bubble.firstElementChild;
+const bubbleSaid = bubble.querySelector('.said');
+const bubbleRest = bubble.querySelector('.rest');
+const bubbleSr = $('#bubbleSr');
+
+let speech = null;
 let sayT = 0;
 function say(text, dur = 1.9, force = false) {
   if (!force && performance.now() - wokeAt < 1200) return;
-  bubbleText.textContent = text;
+  const plan = speechPlan(text);
+  speech = { plan, i: 0, wait: 0.06, said: '', syllable: 0 };
+  bubbleSaid.textContent = '';
+  bubbleRest.textContent = text;
+  bubbleSr.textContent = text;
   bubble.classList.remove('show');
   void bubble.offsetWidth;
   bubble.classList.add('show');
-  sayT = dur;
+  // keep the bubble up for the whole line plus a moment to read it
+  sayT = Math.max(dur, plan.reduce((t, s) => t + s.delay, 0.06) + 1.3);
+}
+
+function advanceSpeech(dt) {
+  if (!speech) return false;
+  speech.wait -= dt;
+  let changed = false;
+  while (speech.wait <= 0 && speech.i < speech.plan.length) {
+    const s = speech.plan[speech.i++];
+    speech.said += s.ch;
+    changed = true;
+    if (s.voiced && !document.hidden) {
+      const step = VOICE_STEPS[speech.syllable++ % VOICE_STEPS.length] * (0.97 + Math.random() * 0.06);
+      sfx.voice(680 * step * (s.rising ? 1.25 : 1));
+    }
+    speech.wait += s.delay;
+  }
+  if (changed) {
+    bubbleSaid.textContent = speech.said;
+    bubbleRest.textContent = speech.plan.slice(speech.i).map((s) => s.ch).join('');
+  }
+  if (speech.i >= speech.plan.length) speech = null;
+  return true;
 }
 
 const dialectBtn = $('#dialectBtn');
@@ -130,8 +163,30 @@ function tickLonely(dt) {
 }
 
 let hiddenAt = 0;
+
+// While the tab is in the background, its title becomes 寂寞小猫: a new line every
+// 20 s, ending with her asleep. The stage is worked out from how long you've been
+// away, so throttled background timers can only delay an update, never skip one.
+const BASE_TITLE = document.title;
+const TITLE_STEP = 20;
+let titleTimer = 0;
+function awayTitle() {
+  const lines = LINES[dialect].lonely ?? LINES.henan.lonely;
+  const away = (performance.now() - hiddenAt) / 1000;
+  const stage = Math.min(lines.length - 1, Math.max(lonely - 1, Math.floor(away / TITLE_STEP)));
+  document.title = `${stage === lines.length - 1 ? '💤' : '🐾'} ${lines[stage]}`;
+}
+
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { hiddenAt = performance.now(); return; }
+  if (document.hidden) {
+    hiddenAt = performance.now();
+    awayTitle();
+    clearInterval(titleTimer);
+    titleTimer = setInterval(awayTitle, 1000);
+    return;
+  }
+  clearInterval(titleTimer);
+  document.title = BASE_TITLE;
   if (introDone && performance.now() - hiddenAt > 15000 && lonely === 0) {
     lonely = 1; // pretend she missed you, so activity() greets you back
     activity();
@@ -142,6 +197,7 @@ document.addEventListener('visibilitychange', () => {
 /* reactions                                                           */
 /* ------------------------------------------------------------------ */
 let petCooldown = 0;
+let heartCooldown = 0;
 
 function react(zone, side) {
   activity();
@@ -164,8 +220,12 @@ function react(zone, side) {
 function petTick(zone) {
   activity();
   cat.petTick();
-  stage.spawn('heart', stage.headTop(), { x: rand(-35, 35), y: rand(-100, -65) }, { life: 1.1, size: 18, gravity: 20 });
-  addMoe(1);
+  // continuous stroking fires many ticks a second; keep hearts and moe at a gentle pace
+  if (heartCooldown <= 0) {
+    stage.spawn('heart', stage.headTop(), { x: rand(-35, 35), y: rand(-100, -65) }, { life: 1.1, size: 18, gravity: 20 });
+    addMoe(1);
+    heartCooldown = 0.35;
+  }
   if (petCooldown <= 0) {
     say(line(zone === 'chin' ? 'chin' : 'pet'));
     petCooldown = 3;
@@ -331,9 +391,12 @@ function animate(now) {
     say(line('greet'), 2.6);
   }
   if (!debugControls?.holding) tickLonely(dt);
-  cat.update(dt, sayT > 0 || debugControls?.talking);
+  // the mouth moves while the words are still coming out, not for the whole bubble
+  const speaking = advanceSpeech(dt);
+  cat.update(dt, speaking || debugControls?.talking);
   sfx.setPurr(Math.max(0, cat.pet - 0.15));
   petCooldown -= dt;
+  heartCooldown -= dt;
   if (cat.sleeping) {
     zzzT -= dt;
     if (zzzT <= 0) {
@@ -381,7 +444,7 @@ if (import.meta.env.DEV) {
     zoneAtClient(x, y) { setPointer({ clientX: x, clientY: y }); return zoneAt(); },
     react, petTick,
     skipQuiet(sec) { quiet += sec; },
-    state: () => ({ ready, sprite: cat.frame, loaded: stage.loaded, lonely, quiet: +quiet.toFixed(1), dialect, sayT: +sayT.toFixed(2), text: bubbleText.textContent }),
+    state: () => ({ ready, sprite: cat.frame, loaded: stage.loaded, lonely, quiet: +quiet.toFixed(1), dialect, sayT: +sayT.toFixed(2), text: bubbleSr.textContent }),
   };
   if (new URLSearchParams(location.search).has('sprite-test')) {
     const panel=document.createElement('details');

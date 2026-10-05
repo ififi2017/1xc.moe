@@ -26,6 +26,10 @@ export class SpriteCharacter {
     this.motionTime = 0;
     this.motionDuration = 0;
     this.temporaryPose = null;
+    // continuous "nuzzle" sway while being petted (0..1); kept separate from
+    // one-shot motions so repeated pets never restart it and make her twitch
+    this.nuzzle = 0;
+    this.nuzzleHold = 0;
     this.deferPoseTimers = false;
     this.presentedPose = 'idle';
     this.channels = { blink:false, talk:false };
@@ -73,7 +77,7 @@ export class SpriteCharacter {
     if (!this.requestPose('paws', 1.5, 20)) return;
     this.pet = Math.min(1, this.pet + 0.45);
     this.setExpr('content', 1.5);
-    this.playMotion('nuzzle', 1.5);
+    this.nuzzleHold = 1.5;
   }
 
   react(zone) {
@@ -90,6 +94,9 @@ export class SpriteCharacter {
       if (this.temporaryPose.remaining <= 0) this.temporaryPose = null;
     }
     this.motionTime = Math.max(0, this.motionTime - dt);
+    this.nuzzleHold = Math.max(0, this.nuzzleHold - dt);
+    const nuzzleTarget = this.nuzzleHold > 0 && !this.sleeping ? 1 : 0;
+    this.nuzzle += (nuzzleTarget - this.nuzzle) * (1 - Math.exp(-4 * dt));
     this.expressionTime = Math.max(0, this.expressionTime - dt);
     this.pet = Math.max(0, this.pet - dt * 0.28);
     this.blinkIn -= dt;
@@ -128,12 +135,14 @@ export class SpriteCharacter {
     const turn = { shake: Math.sin(phase * Math.PI * 6) * 0.018, tilt: -0.018,
       nuzzle: Math.sin(phase * Math.PI * 2) * 0.012, greet: 0.009, celebrate: Math.sin(phase * Math.PI * 4) * 0.014 };
     const nod = ['nod', 'greet', 'nuzzle'].includes(this.motion) ? Math.sin(phase * Math.PI * 4) * 3 : 0;
+    const sway = this.reduceMotion ? 0 : this.nuzzle;
     return {
       x: rect.x + rect.width / 2,
-      y: rect.y + rect.height - (this.reduceMotion ? 0 : this.bounce) + envelope * nod,
+      y: rect.y + rect.height - (this.reduceMotion ? 0 : this.bounce) + envelope * nod + sway * Math.sin(this.time * 4.4) * 2.5,
       width: rect.width * (1 + breath * 0.0015),
       height: rect.height * (1 + breath * 0.003),
-      angle: this.reduceMotion ? 0 : Math.sin(this.time * 0.7) * 0.003 + envelope * (turn[this.motion] ?? 0),
+      angle: this.reduceMotion ? 0 : Math.sin(this.time * 0.7) * 0.003 + envelope * (turn[this.motion] ?? 0)
+        + sway * Math.sin(this.time * 2.2) * 0.012,
     };
   }
 
