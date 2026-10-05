@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立绘分层校准</title>
+<style>
+body { margin: 24px; color: #604758; background: #fff5f9; font: 15px system-ui; }
+h1 { font-size: 22px; } main { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+figure { margin: 0; padding: 12px; border: 1px solid #e3cbdc; border-radius: 16px; background: #fbf5ff; }
+canvas { width: 100%; height: auto; } figcaption { text-align: center; }
+</style>
+<h1>立绘分层校准 · 12 种表情</h1>
+<p>开发预览：无五官底图 → 表情图集 → 前景刘海。主站只加载这三张图。</p>
+<main></main>
+<script type="module">
+import { LAYERS, drawCharacter } from './src/sprite-art.js';
+const layers = new Map();
+await Promise.all(LAYERS.map(async name => {
+  const image = new Image();
+  image.src = `/sprites/layers/${name}.webp`;
+  await image.decode();
+  layers.set(name, image);
+}));
+const reference = new Image(); reference.src = '/sprites/layers/hair_front.webp'; await reference.decode();
+const reviewOrder = ['idle_coax', 'idle_smile', 'idle_shy', 'idle_talk', 'idle_surprised', 'idle_content', 'idle_sleep', 'idle_wink', 'idle_blink', 'idle_happy', 'idle_pout', 'idle_sulky'];
+for (const frame of ['原图对照', ...reviewOrder]) {
+  const figure = document.createElement('figure');
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 640;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(-190, -10);
+  if (frame === '原图对照') ctx.drawImage(reference, 0, 0); else drawCharacter(ctx, layers, frame);
+  const label = document.createElement('figcaption'); label.textContent = frame;
+  figure.append(canvas, label); document.querySelector('main').append(figure);
+}
+</script>
+</html>

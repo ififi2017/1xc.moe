@@ -38,9 +38,14 @@
   </header>
 
   <section class="hero" id="home">
-    <canvas id="stage" aria-label="3D 猫娘猫猫：可以摸头、挠下巴、碰耳朵和尾巴、戳铃铛"></canvas>
+    <canvas id="stage" role="img" aria-label="猫娘猫猫的互动立绘：可以摸头、挠下巴、碰耳朵和尾巴、戳铃铛"></canvas>
     <div id="bubble" class="bubble" aria-live="polite"><span></span></div>
     <div id="loader" aria-hidden="true"><i></i><i></i><i></i></div>
+
+    <div id="spriteError" class="sprite-error" role="status" hidden>
+      <p>猫猫的画像还没加载出来…</p>
+      <button id="retrySprite" class="btn" type="button">再试一次</button>
+    </div>
 
     <div class="hero-text">
       <h1 class="logo" aria-label="1xc.moe">
@@ -48,9 +53,9 @@
       </h1>
       <p class="tagline">河南猫娘「猫猫」的小窝 <span class="kao">(=^-ω-^=)</span></p>
       <p class="hint">
-        <span class="chip">摸摸头</span>
-        <span class="chip">挠下巴</span>
-        <span class="chip">戳铃铛</span>
+        <button class="chip" type="button" data-pet="head" disabled>摸摸头</button>
+        <button class="chip" type="button" data-pet="chin" disabled>挠下巴</button>
+        <button class="chip" type="button" data-pet="bell" disabled>戳铃铛</button>
         <span class="chip kb">敲 <kbd>1</kbd><kbd>x</kbd><kbd>c</kbd></span>
       </p>
       <a class="scroll-cue" href="#skill">猫猫的灵魂
