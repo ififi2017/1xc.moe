@@ -21,6 +21,14 @@ const stage = createStage(canvas, { reduceMotion });
 const { renderer, scene, camera } = stage;
 const cat = new Catgirl(scene);
 
+document.querySelectorAll('[data-view]').forEach((button) => {
+  button.addEventListener('click', () => {
+    cat.setView(Number(button.dataset.view));
+    activity();
+    document.querySelectorAll('[data-view]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+  });
+});
+
 /* ------------------------------------------------------------------ */
 /* dialect & speech                                                    */
 /* ------------------------------------------------------------------ */
@@ -229,8 +237,7 @@ function zoneAt() {
   if (!hit) return null;
   let zone = hit.object.userData.zone;
   if (zone === 'head') {
-    const c = cat.headCenter(tmp);
-    if (hit.point.y < c.y - 0.36 && hit.point.z > c.z + 0.2 && Math.abs(hit.point.x - c.x) < 0.42) zone = 'chin';
+    if (cat.isChin(hit.point)) zone = 'chin';
   }
   return { zone, side: hit.object.userData.side ?? 1 };
 }
@@ -307,9 +314,17 @@ $('#copyBtn').addEventListener('click', async (e) => {
 /* ------------------------------------------------------------------ */
 /* layout: fit 猫猫 into the space above the title                      */
 /* ------------------------------------------------------------------ */
-const camBase = new THREE.Vector3(0, 1.9, 12);
-const camLook = new THREE.Vector3(0, 1.4, 0);
+const camBase = new THREE.Vector3(0, 3.1, 18);
+const camLook = new THREE.Vector3(0, 3.05, 0);
 const heroText = $('.hero-text');
+let closeup = true; // upper body by default: bigger face, easier to pat on phones
+$('#closeup').addEventListener('click', (e) => {
+  closeup = !closeup;
+  e.currentTarget.setAttribute('aria-pressed', String(closeup));
+  e.currentTarget.textContent = closeup ? '全身' : '近看';
+  activity();
+  resize();
+});
 
 function resize() {
   const w = hero.clientWidth, h = hero.clientHeight;
@@ -318,12 +333,16 @@ function resize() {
   camera.aspect = w / h;
   const top = 76;
   const bottom = Math.max(top + 180, heroText.offsetTop - 6);
+  canvas.style.clipPath = closeup ? `inset(0 0 ${Math.max(0, h - bottom)}px 0)` : '';
   const avail = bottom - top;
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const fitH = 3.3;  // world units: feet → tip of the ears, plus a little air
-  const halfW = 1.8;
+  // dev-only ?face: a tight portrait for comparing against the face reference sheet
+  const face = import.meta.env.DEV && new URLSearchParams(location.search).has('face');
+  const fitH = face ? 1.55 : closeup ? 3.65 : cat.height + 0.55;
+  const halfW = face ? 0.75 : closeup ? 1.4 : 1.85;
   const dist = Math.max((fitH * h) / (2 * t * avail), halfW / (t * camera.aspect), 7);
-  camBase.set(0, 1.75 + dist * 0.03, dist);
+  camLook.y = face ? 5.08 : closeup ? 4.5 : 3.05;
+  camBase.set(0, camLook.y + 0.05 + dist * 0.006, dist);
   camera.setViewOffset(w, h, 0, h / 2 - (top + bottom) / 2, w, h);
   camera.updateProjectionMatrix();
 }
@@ -342,7 +361,7 @@ const timer = new THREE.Timer();
 timer.connect(document);
 let time = 0;
 let zzzT = 0;
-const lookTarget = new THREE.Vector3(0, 1.6, 6);
+const lookTarget = new THREE.Vector3(0, 5.03, 6);
 const lookPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -2.4);
 const proj = new THREE.Vector3();
 const camPos = camBase.clone();
@@ -357,10 +376,10 @@ renderer.setAnimationLoop(() => {
 
   // where she looks
   if (performance.now() - lastMove > 3500) {
-    tmp.set(Math.sin(time * 0.45) * 2, 1.6 + Math.sin(time * 0.7) * 0.4, 6);
+    tmp.set(Math.sin(time * 0.45) * 1.1, 5.03 + Math.sin(time * 0.7) * 0.2, 6);
   } else {
     raycaster.setFromCamera(pointer, camera);
-    if (!raycaster.ray.intersectPlane(lookPlane, tmp)) tmp.set(0, 1.6, 6);
+    if (!raycaster.ray.intersectPlane(lookPlane, tmp)) tmp.set(0, 5.03, 6);
   }
   lookTarget.lerp(tmp, 1 - Math.exp(-8 * dt));
 
@@ -422,6 +441,7 @@ requestAnimationFrame(() => document.body.classList.add('ready'));
 if (import.meta.env.DEV) {
   window.__1xc = {
     cat,
+    stage,
     zoneAtClient(x, y) { setPointer({ clientX: x, clientY: y }); return zoneAt(); },
     react,
     petTick,

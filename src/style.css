@@ -216,6 +216,33 @@ body { overflow-x: hidden; }
 }
 body.ready #stage { opacity: 1; }
 
+.model-views {
+  position: absolute;
+  right: max(24px, env(safe-area-inset-right));
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+}
+.model-views button {
+  border: 1px solid rgba(193, 154, 186, 0.25);
+  border-radius: 20px;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.model-views button[aria-pressed="true"] {
+  background: #f3e7f4;
+  border-color: #c9a7d3;
+  color: #805e91;
+}
+.model-views button:focus-visible { outline: 2px solid #ab95ff; outline-offset: 3px; }
+
 #loader {
   position: absolute;
   left: 50%;
