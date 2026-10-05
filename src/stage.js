@@ -10,19 +10,35 @@ export function createStage(canvas, { reduceMotion = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.6;
+  scene.environmentIntensity = 0.45;
 
-  const key = new THREE.DirectionalLight(0xfff2f4, 1.6);
-  key.position.set(3, 6, 5);
+  const key = new THREE.DirectionalLight(0xfff2e9, 2.1);
+  key.position.set(-3, 8, 6);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -4, right: 4, top: 7, bottom: -3, near: 0.5, far: 22 });
+  key.shadow.normalBias = 0.025;
+  key.shadow.bias = -0.0002;
+  key.shadow.radius = 3;
   const rim = new THREE.DirectionalLight(0xd8c8ff, 1.1);
   rim.position.set(-5, 3, -4);
-  scene.add(key, rim, new THREE.HemisphereLight(0xfff4fa, 0xe4d9ff, 0.55));
+  const fill = new THREE.DirectionalLight(0xfff4f0, 1.5);
+  fill.position.set(1, 4, 8);
+  scene.add(key, rim, fill, new THREE.HemisphereLight(0xfff4fa, 0xe4d9ff, 0.75));
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ color: '#846879', opacity: 0.14 }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0.005;
+  ground.receiveShadow = true;
+  scene.add(ground);
 
   const shadow = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
