@@ -1,14 +1,12 @@
 import './style.css';
-import * as THREE from 'three';
-import { createStage } from './stage.js';
-import { Catgirl } from './catgirl.js';
+import { createSpriteStage } from './sprite-stage.js';
+import { SpriteCharacter } from './sprite-character.js';
 import { DIALECTS, LINES } from './lines.js';
 import * as sfx from './audio.js';
 
 const $ = (s) => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
-const damp = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -17,9 +15,9 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const hero = $('.hero');
 const canvas = $('#stage');
-const stage = createStage(canvas, { reduceMotion });
-const { renderer, scene, camera } = stage;
-const cat = new Catgirl(scene);
+const cat = new SpriteCharacter({ reduceMotion });
+const stage = createSpriteStage(canvas, cat, { reduceMotion });
+let ready = false;
 
 /* ------------------------------------------------------------------ */
 /* dialect & speech                                                    */
@@ -142,13 +140,12 @@ document.addEventListener('visibilitychange', () => {
 /* ------------------------------------------------------------------ */
 /* reactions                                                           */
 /* ------------------------------------------------------------------ */
-const tmp = new THREE.Vector3();
 let petCooldown = 0;
 
 function react(zone, side) {
   activity();
   cat.react(zone, side);
-  const top = cat.headTop(tmp);
+  const top = stage.headTop();
   switch (zone) {
     case 'head': say(line('head')); sfx.blip(520); break;
     case 'chin': say(line('chin')); break;
@@ -166,7 +163,7 @@ function react(zone, side) {
 function petTick(zone) {
   activity();
   cat.petTick();
-  stage.spawn('heart', cat.headTop(tmp), new THREE.Vector3(rand(-0.6, 0.6), rand(1.5, 2.3), 0.6), { life: 1.1, size: 1, gravity: 1 });
+  stage.spawn('heart', stage.headTop(), { x: rand(-35, 35), y: rand(-100, -65) }, { life: 1.1, size: 18, gravity: 20 });
   addMoe(1);
   if (petCooldown <= 0) {
     say(line(zone === 'chin' ? 'chin' : 'pet'));
@@ -180,7 +177,7 @@ function celebrate() {
   say(line('celebrate'), 2.4);
   sfx.meow(1.15);
   setTimeout(() => sfx.ding(), 250);
-  stage.burst(cat.headTop(tmp), 16);
+  stage.burst(stage.headTop(), 16);
   setTimeout(heartRain, 500);
   addMoe(10);
 }
@@ -188,8 +185,8 @@ function celebrate() {
 function heartRain() {
   for (let i = 0; i < 40; i++) {
     setTimeout(() => {
-      stage.spawn('heart', new THREE.Vector3(rand(-4, 4), rand(4.5, 6), rand(-1, 1.5)),
-        new THREE.Vector3(rand(-0.3, 0.3), rand(-1.5, -0.6), 0), { life: 4, size: rand(1.2, 2.2), gravity: 1.1 });
+      stage.spawn('heart', { x: rand(0, stage.width), y: rand(50, 120) },
+        { x: rand(-15, 15), y: rand(25, 60) }, { life: 4, size: rand(14, 26), gravity: 15 });
     }, i * 55);
   }
   cat.setExpr('happy', 1.6);
@@ -206,65 +203,59 @@ function feed(k) {
   seq = (seq + k).slice(-6);
   if (seq.endsWith('1xc')) { seq = ''; setTimeout(celebrate, 100); }
   else if (seq.endsWith('moe')) { seq = ''; activity(); heartRain(); }
-  else if (/(nya|miao|meow)$/.test(seq)) { seq = ''; activity(); cat.setExpr('happy', 0.8); say(line('meow')); sfx.meow(rand(1, 1.2)); }
+  else if (/(nya|miao|meow)$/.test(seq)) { seq = ''; activity(); cat.wink(); say(line('meow')); sfx.meow(rand(1, 1.2)); }
 }
 
 /* ------------------------------------------------------------------ */
 /* input                                                               */
 /* ------------------------------------------------------------------ */
-const pointer = new THREE.Vector2();
-const raycaster = new THREE.Raycaster();
-let lastMove = -1e9;
-let hoverZone = null;
+const pointer = { x: 0, y: 0 };
+let pointerSeen = false;
+let petAccum = 0;
 
 function setPointer(e) {
   const r = canvas.getBoundingClientRect();
-  pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-  pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  pointer.x = e.clientX - r.left;
+  pointer.y = e.clientY - r.top;
 }
 
-function zoneAt() {
-  raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(cat.hit, false)[0];
-  if (!hit) return null;
-  let zone = hit.object.userData.zone;
-  if (zone === 'head') {
-    const c = cat.headCenter(tmp);
-    if (hit.point.y < c.y - 0.36 && hit.point.z > c.z + 0.2 && Math.abs(hit.point.x - c.x) < 0.42) zone = 'chin';
-  }
-  return { zone, side: hit.object.userData.side ?? 1 };
-}
+function zoneAt() { return stage.zoneAt(pointer); }
 
-let petAccum = 0;
 window.addEventListener('pointermove', (e) => {
   activity();
-  if (e.target !== canvas) return;
-  const px = pointer.x, py = pointer.y;
+  if (e.target !== canvas || !ready) { pointerSeen = false; petAccum = 0; return; }
+  const previous = { ...pointer };
   setPointer(e);
-  lastMove = performance.now();
   const z = zoneAt();
-  hoverZone = z?.zone ?? null;
-  canvas.style.cursor = hoverZone ? (hoverZone === 'head' || hoverZone === 'chin' ? 'grab' : 'pointer') : 'default';
-  if (z && ['head', 'chin', 'ear'].includes(z.zone) && (e.pointerType === 'mouse' || e.buttons)) {
-    petAccum += Math.hypot(pointer.x - px, pointer.y - py);
-    if (petAccum > 0.22) { petAccum = 0; petTick(z.zone); }
-  }
+  canvas.style.cursor = z ? (['head', 'chin'].includes(z.zone) ? 'grab' : 'pointer') : 'default';
+  if (pointerSeen && z && ['head', 'chin', 'ear'].includes(z.zone) && (e.pointerType === 'mouse' || e.buttons)) {
+    petAccum += Math.hypot(pointer.x - previous.x, pointer.y - previous.y);
+    if (petAccum > 42) { petAccum = 0; petTick(z.zone); }
+  } else petAccum = 0;
+  pointerSeen = true;
 }, { passive: true });
+canvas.addEventListener('pointerleave', () => { pointerSeen = false; petAccum = 0; });
 
 canvas.addEventListener('pointerdown', (e) => {
+  if (!ready) return;
   setPointer(e);
-  lastMove = performance.now();
   const z = zoneAt();
   if (z) return react(z.zone, z.side);
   activity();
-  // tap on empty space → a little sparkle where you tapped
-  raycaster.setFromCamera(pointer, camera);
-  if (raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.3), tmp)) {
-    for (let i = 0; i < 4; i++) {
-      stage.spawn('star', tmp, new THREE.Vector3(rand(-1.2, 1.2), rand(1, 2.5), rand(0, 0.6)), { life: 0.9, size: rand(0.6, 1), gravity: 3 });
-    }
-    sfx.sparkle();
+  for (let i = 0; i < 4; i++) {
+    stage.spawn('star', pointer, { x: rand(-60, 60), y: rand(-100, -40) }, { life: 0.9, size: rand(12, 20), gravity: 50 });
   }
+  sfx.sparkle();
+});
+
+// The same interactions are reachable with touch and keyboard, without having
+// to locate a small bell or chin in the artwork.
+document.querySelectorAll('[data-pet]').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (!ready) return;
+    const zone = button.dataset.pet;
+    if (zone === 'bell') react(zone); else petTick(zone);
+  });
 });
 
 window.addEventListener('keydown', (e) => {
@@ -305,127 +296,89 @@ $('#copyBtn').addEventListener('click', async (e) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* layout: fit 猫猫 into the space above the title                      */
+/* sprite layout and animation                                         */
 /* ------------------------------------------------------------------ */
-const camBase = new THREE.Vector3(0, 1.9, 12);
-const camLook = new THREE.Vector3(0, 1.4, 0);
 const heroText = $('.hero-text');
-
 function resize() {
   const w = hero.clientWidth, h = hero.clientHeight;
-  if (!w || !h) return; // hidden / zero-size frame: keep the last good camera
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  const top = 76;
-  const bottom = Math.max(top + 180, heroText.offsetTop - 6);
-  const avail = bottom - top;
-  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const fitH = 3.3;  // world units: feet → tip of the ears, plus a little air
-  const halfW = 1.8;
-  const dist = Math.max((fitH * h) / (2 * t * avail), halfW / (t * camera.aspect), 7);
-  camBase.set(0, 1.75 + dist * 0.03, dist);
-  camera.setViewOffset(w, h, 0, h / 2 - (top + bottom) / 2, w, h);
-  camera.updateProjectionMatrix();
+  if (!w || !h) return;
+  const top = 88;
+  const wide = w >= 900;
+  const bottom = wide ? h - 22 : Math.max(top + 160, heroText.offsetTop - 12);
+  stage.resize(w, h, top, bottom, wide ? w * 0.44 : 0, wide ? w * 0.53 : w);
 }
 addEventListener('resize', resize);
+new ResizeObserver(resize).observe(heroText);
 resize();
 document.fonts?.ready.then(resize);
 
-// checked every frame: an IntersectionObserver can get stuck "not visible" if the
-// page first loads in a zero-size frame (background tab, collapsed iframe)
 let heroVisible = true;
-
-/* ------------------------------------------------------------------ */
-/* loop                                                                */
-/* ------------------------------------------------------------------ */
-const timer = new THREE.Timer();
-timer.connect(document);
+let lastTime = performance.now();
 let time = 0;
 let zzzT = 0;
-const lookTarget = new THREE.Vector3(0, 1.6, 6);
-const lookPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -2.4);
-const proj = new THREE.Vector3();
-const camPos = camBase.clone();
-
-renderer.setAnimationLoop(() => {
-  timer.update();
-  const dt = Math.min(timer.getDelta(), 1 / 30);
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(Math.max(0, (now - lastTime) / 1000), 1 / 30);
+  lastTime = now;
   const rect = hero.getBoundingClientRect();
   heroVisible = rect.bottom > 0 && rect.top < innerHeight;
-  if (!heroVisible) return;
+  if (!heroVisible || document.hidden || !ready) { sfx.setPurr(0); return; }
   time += dt;
-
-  // where she looks
-  if (performance.now() - lastMove > 3500) {
-    tmp.set(Math.sin(time * 0.45) * 2, 1.6 + Math.sin(time * 0.7) * 0.4, 6);
-  } else {
-    raycaster.setFromCamera(pointer, camera);
-    if (!raycaster.ray.intersectPlane(lookPlane, tmp)) tmp.set(0, 1.6, 6);
-  }
-  lookTarget.lerp(tmp, 1 - Math.exp(-8 * dt));
-
-  const { landed } = cat.update(dt, time, lookTarget);
-  if (landed > 4) sfx.plop();
-  if (!introDone && cat.y === 0 && time > 0.8) {
+  if (!introDone && time > 0.8) {
     introDone = true;
-    setTimeout(() => { cat.wave(); say(line('greet'), 2.6); }, 350);
+    cat.wave();
+    say(line('greet'), 2.6);
   }
-
-  // purr while being petted
+  tickLonely(dt);
+  cat.update(dt, sayT > 0);
   sfx.setPurr(Math.max(0, cat.pet - 0.15));
   petCooldown -= dt;
-
-  // Zzz…
   if (cat.sleeping) {
     zzzT -= dt;
     if (zzzT <= 0) {
       zzzT = 1.3;
-      stage.spawn('z', cat.headTop(proj).add(tmp.set(0.35, 0.05, 0.2)), new THREE.Vector3(0.25, 0.55, 0), { life: 2.6, size: 0.42, gravity: 0 });
+      const top = stage.headTop();
+      stage.spawn('z', { x: top.x + 45, y: top.y + 20 }, { x: 12, y: -26 }, { life: 2.6, size: 18, gravity: 0 });
     }
-  }
-  tickLonely(dt);
-  stage.update(dt, time);
+  } else zzzT = 0;
+  stage.draw(dt);
 
-  // blob shadow follows the jump
-  const k = 1 / (1 + cat.y * 0.45);
-  stage.shadow.scale.set(1.7 * k, 1, 1.15 * k);
-  stage.shadow.material.opacity = 0.35 + 0.65 * k;
-
-  // gentle parallax
-  camPos.x = damp(camPos.x, camBase.x + pointer.x * 0.4, 3, dt);
-  camPos.y = damp(camPos.y, camBase.y + pointer.y * 0.25, 3, dt);
-  camPos.z = camBase.z;
-  if (!Number.isFinite(camPos.x + camPos.y)) camPos.copy(camBase);
-  camera.position.copy(camPos);
-  camera.lookAt(camLook);
-
-  // speech bubble follows her head
   if (sayT > 0) {
     sayT -= dt;
     if (sayT <= 0) bubble.classList.remove('show');
-    cat.headTop(proj);
-    proj.y += 0.18;
-    proj.project(camera);
-    const w = hero.clientWidth;
+    const top = stage.headTop();
     const half = bubbleText.offsetWidth / 2 + 10;
-    const x = Math.min(Math.max((proj.x * 0.5 + 0.5) * w, half), w - half);
-    const y = (-proj.y * 0.5 + 0.5) * hero.clientHeight;
-    bubble.style.transform = `translate(${x.toFixed(1)}px, ${(y - 14).toFixed(1)}px)`;
+    const x = Math.min(Math.max(top.x, half), hero.clientWidth - half);
+    const y = Math.max(bubbleText.offsetHeight + 18, top.y - 6);
+    bubble.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
   }
+}
+requestAnimationFrame(animate);
 
-  renderer.render(scene, camera);
-});
+async function loadCharacter() {
+  const error = $('#spriteError');
+  error.hidden = true;
+  document.body.classList.remove('load-error');
+  try {
+    await stage.init();
+    ready = true;
+    document.body.classList.add('ready');
+    document.querySelectorAll('[data-pet]').forEach((button) => { button.disabled = false; });
+  } catch (cause) {
+    console.error('立绘加载失败', cause);
+    document.body.classList.add('load-error');
+    error.hidden = false;
+  }
+}
+$('#retrySprite').addEventListener('click', loadCharacter);
+void loadCharacter();
 
-requestAnimationFrame(() => document.body.classList.add('ready'));
-
-// dev-only hooks for poking at her from the console (stripped from production builds)
 if (import.meta.env.DEV) {
   window.__1xc = {
-    cat,
+    cat, stage,
     zoneAtClient(x, y) { setPointer({ clientX: x, clientY: y }); return zoneAt(); },
-    react,
-    petTick,
+    react, petTick,
     skipQuiet(sec) { quiet += sec; },
-    state: () => ({ lonely, quiet: +quiet.toFixed(1), dialect, sayT: +sayT.toFixed(2), text: bubbleText.textContent }),
+    state: () => ({ ready, sprite: cat.frame, loaded: stage.loaded, lonely, quiet: +quiet.toFixed(1), dialect, sayT: +sayT.toFixed(2), text: bubbleText.textContent }),
   };
 }

@@ -216,6 +216,36 @@ body { overflow-x: hidden; }
 }
 body.ready #stage { opacity: 1; }
 
+.hero {
+  background: radial-gradient(ellipse at 65% 45%, rgba(231, 219, 243, 0.42), transparent 62%);
+}
+
+@media (min-width: 900px) {
+  .hero .hero-text {
+    left: 5%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: 40%;
+    transform: translateY(-45%);
+  }
+  .hero .logo { font-size: clamp(70px, 8vw, 112px); }
+  .hero .tagline { margin-top: 24px; }
+  .hero .hint { margin-top: 24px; }
+  .hero .scroll-cue { margin-top: 28px; }
+}
+
+.sprite-error {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90%, 320px);
+  text-align: center;
+  color: var(--ink-soft);
+}
+body.load-error #loader { display: none; }
+
 #loader {
   position: absolute;
   left: 50%;
@@ -297,6 +327,7 @@ body.ready #loader { opacity: 0; pointer-events: none; }
   justify-content: center;
 }
 .chip {
+  font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   color: var(--ink-soft);
@@ -512,4 +543,13 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .bg::after, .logo span, .meter-heart, .scroll-cue svg { animation: none; }
+}
+
+button.chip { pointer-events: auto; cursor: pointer; transition: background 0.2s; }
+button.chip:hover { background: #fff; }
+button.chip:focus-visible { outline: 3px solid var(--c); outline-offset: 3px; }
+button.chip:disabled { opacity: 0.5; cursor: wait; }
+@media (prefers-reduced-motion: reduce) {
+  #stage, .bubble span { transition: none; }
+  #loader i, .logo span.boing, .meter b.pop { animation: none; }
 }
