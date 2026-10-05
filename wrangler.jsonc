@@ -3,7 +3,7 @@
   "name": "1xc-moe",
   "compatibility_date": "2026-10-01",
   "assets": {
-    "directory": "./public"
+    "directory": "./dist"
   },
   "routes": [
     { "pattern": "1xc.moe", "custom_domain": true },

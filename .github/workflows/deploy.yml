@@ -16,11 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
 
       # PRs: validate the build without publishing anything
       - name: Dry run
         if: github.event_name == 'pull_request'
-        run: npx --yes wrangler@4 deploy --dry-run
+        run: npx wrangler deploy --dry-run
 
       # main: publish to 1xc.moe
       - name: Deploy to Cloudflare
@@ -29,4 +35,3 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4"
