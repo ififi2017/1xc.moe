@@ -1,10 +1,21 @@
 import { fitSprite, projectPoint, unprojectPoint, spriteZone } from './sprite-character.js';
-import { ART_SIZE, LAYERS, drawCharacter } from './sprite-art.js';
+import { ART_SIZE, POSES, drawCharacter, resolveExpression } from './sprite-art.js';
+import { createPoseLoader, PoseTransition } from './sprite-loader.js';
 
 export function createSpriteStage(canvas, cat, { reduceMotion = false } = {}) {
   const ctx = canvas.getContext('2d');
-  const images = new Map();
-  let alphaMask;
+  const masks = new Map();
+  const transition = new PoseTransition(reduceMotion);
+  const buffer = () => { const c=document.createElement('canvas'); c.width=ART_SIZE.width; c.height=ART_SIZE.height; return c; };
+  const composed=buffer(), previous=buffer(), next=buffer();
+  const composedCtx=composed.getContext('2d'), previousCtx=previous.getContext('2d'), nextCtx=next.getContext('2d');
+  cat.deferPoseTimers=true;
+  const loader=createPoseLoader(async path => {
+    const img=new Image(); img.decoding='async'; img.src=path; await img.decode(); return img;
+  });
+  let preloading=false;
+  let lastRequested='idle';
+  let lastArtKey='', lastMix=1;
   const particles = [];
   const maskWidth = 128, maskHeight = 192;
   let width = 1, height = 1;
@@ -12,13 +23,36 @@ export function createSpriteStage(canvas, cat, { reduceMotion = false } = {}) {
   let transform = cat.transform(rect);
   let complete = false;
 
-  async function load(name) {
-    if (images.has(name)) return;
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = `/sprites/layers/${name}.webp`;
-    await img.decode();
-    images.set(name, img);
+  async function loadPose(pose) {
+    const layers=await loader.load(pose);
+    if (!masks.has(pose)) {
+      const mask=document.createElement('canvas'); mask.width=maskWidth; mask.height=maskHeight;
+      const context=mask.getContext('2d', {willReadFrequently:true});
+      context.drawImage(layers.get('base'),0,0,maskWidth,maskHeight);
+      masks.set(pose,context.getImageData(0,0,maskWidth,maskHeight).data);
+    }
+    return layers;
+  }
+  function requestLoad(pose) {
+    if (!loader.pending.has(pose) && !loader.ready.has(pose)) {
+      void loadPose(pose).catch(error => { canvas.dataset.loadError=pose; console.warn(`姿势 ${pose} 加载失败，保留待机`,error); });
+    }
+  }
+  function preload() {
+    if (preloading) return;
+    preloading=true;
+    // Two paints separate idle's first visible frame from background requests.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const schedule=globalThis.requestIdleCallback ?? (callback => setTimeout(callback,150));
+      const poses=Object.keys(POSES).filter(pose => pose !== 'idle');
+      const step=() => schedule(async () => {
+        const pose=poses.shift();
+        if (!pose) return;
+        try { await loadPose(pose); } catch { /* Demand can retry this pose later. */ }
+        step();
+      });
+      step();
+    }));
   }
 
   function resize(w, h, top, bottom, left = 0, areaWidth = w) {
@@ -49,13 +83,44 @@ export function createSpriteStage(canvas, cat, { reduceMotion = false } = {}) {
     ctx.clearRect(0, 0, width, height);
     transform = cat.transform(rect);
     if (complete) {
+      const requested=cat.pose;
+      if (!loader.errors.has(requested) || requested !== lastRequested) requestLoad(requested);
+      lastRequested=requested;
+      if (transition.select(requested,loader.ready)) {
+        previousCtx.clearRect(0,0,ART_SIZE.width,ART_SIZE.height);
+        previousCtx.drawImage(composed,0,0);
+      }
+      const pose=transition.pose;
+      cat.presentPose(pose);
+      const frame=pose === 'idle' ? cat.frame : cat.expressionFrame;
+      const hairAngle=Math.round(cat.hairAngle * (pose === 'idle' ? 1 : .2) / .002) * .002;
+      const artKey=`${pose}/${frame}/${cat.channels.blink}/${cat.channels.talk}/${hairAngle}`;
+      const changed=artKey !== lastArtKey;
+      if (changed) {
+        nextCtx.clearRect(0,0,ART_SIZE.width,ART_SIZE.height);
+        drawCharacter(nextCtx,loader.ready.get(pose),frame,hairAngle,pose,cat.channels);
+        lastArtKey=artKey;
+      }
+      const mix=transition.advance(dt);
+      if (changed || mix < 1 || lastMix < 1) {
+        composedCtx.clearRect(0,0,ART_SIZE.width,ART_SIZE.height);
+        composedCtx.save();
+        if (mix < 1) { composedCtx.globalAlpha=1-mix; composedCtx.drawImage(previous,0,0); }
+        composedCtx.globalAlpha=mix;
+        // Add premultiplied pixels so overlap stays opaque halfway through a fade.
+        composedCtx.globalCompositeOperation='lighter'; composedCtx.drawImage(next,0,0); composedCtx.restore();
+      }
+      lastMix=mix;
       ctx.save();
-      ctx.translate(transform.x, transform.y);
-      ctx.rotate(transform.angle);
-      ctx.translate(-transform.width / 2, -transform.height);
-      ctx.scale(transform.width / ART_SIZE.width, transform.height / ART_SIZE.height);
-      drawCharacter(ctx, images, cat.frame, cat.hairAngle);
+      ctx.translate(transform.x,transform.y); ctx.rotate(transform.angle);
+      ctx.drawImage(composed,-transform.width/2,-transform.height,transform.width,transform.height);
       ctx.restore();
+      canvas.dataset.pose=pose;
+      canvas.dataset.requestedPose=requested;
+      canvas.dataset.expression=resolveExpression(pose,frame);
+      canvas.dataset.transition=mix.toFixed(3);
+      canvas.dataset.blink=String(cat.channels.blink);
+      canvas.dataset.talk=String(cat.channels.talk);
       // the artwork is cropped at mid-thigh; fade that edge out instead of a hard cut
       const fadeH = transform.height * 0.1;
       const bottom = transform.y + 2;
@@ -87,28 +152,23 @@ export function createSpriteStage(canvas, cat, { reduceMotion = false } = {}) {
   }
 
   return {
-    resize, draw, spawn, burst,
+    resize, draw, spawn, burst, preload, loadPose,
     get width() { return width; },
     get height() { return height; },
-    get loaded() { return [...images.keys()]; },
-    async init() {
-      await Promise.all(LAYERS.map(load));
-      const mask = document.createElement('canvas');
-      mask.width = maskWidth;
-      mask.height = maskHeight;
-      const maskCtx = mask.getContext('2d', { willReadFrequently: true });
-      maskCtx.drawImage(images.get('character_base'), 0, 0, maskWidth, maskHeight);
-      alphaMask = maskCtx.getImageData(0, 0, maskWidth, maskHeight).data;
-      complete = true;
-      draw(0);
+    get loaded() { return [...loader.ready.keys()]; },
+    get pose() { return transition.pose; },
+    pointAt(point) { return projectPoint(point,transform); },
+    async init() { await loadPose('idle'); complete=true; draw(0); },
+    headTop() {
+      const [x,y]=POSES[transition.pose].headTop;
+      return projectPoint({x,y},transform);
     },
-    headTop() { return projectPoint({ x: 0.48, y: 0.045 }, transform); },
     zoneAt(point) {
       const uv = unprojectPoint(point, transform);
       if (uv.x < 0 || uv.x >= 1 || uv.y < 0 || uv.y >= 1) return null;
-      const mask = alphaMask;
+      const mask = masks.get(transition.pose);
       if (!mask || mask[(Math.floor(uv.y * maskHeight) * maskWidth + Math.floor(uv.x * maskWidth)) * 4 + 3] < 48) return null;
-      return { zone: spriteZone(uv), side: uv.x < 0.5 ? -1 : 1 };
+      return { zone: spriteZone(uv, transition.pose), side: uv.x < 0.5 ? -1 : 1 };
     },
   };
 }
