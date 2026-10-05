@@ -98,40 +98,35 @@ export function ding() {
   }
 }
 
-// 呼噜 — a real purr isn't a steady drone (that's what made it sound like a
-// helicopter). It comes in breaths: a louder, lower out-breath and a softer,
-// slightly faster in-breath, each a train of ~25 Hz soft pulses with a short
-// pause between breaths. A few breaths are pre-rendered with random jitter and
-// scheduled back to back while she's being petted.
-const purr = { bus: null, out: [], in: [], next: 0, exhale: true };
+// 呼噜 — a low, voiced "咕噜噜" rather than chopped noise (chopped noise reads
+// as a helicopter). Each breath is a hum on a fixed 25 Hz fundamental with its
+// harmonics shaped around 80–160 Hz and only a slow, slight pitch drift; the
+// out-breath is longer and louder, the in-breath shorter and softer, with a
+// pause in between. Exactly one breath plays at a time and the tempo never
+// changes: petting harder or longer only raises the volume, up to a cap.
+const PURR_F0 = 25;
+const purr = { bus: null, out: [], in: [], next: 0, exhale: true, queued: [] };
 
-function renderBreath({ seconds, rate, cutoff, loud }) {
+function renderBreath(seconds, loud) {
   const sr = ctx.sampleRate;
   const n = Math.floor(seconds * sr);
   const buf = ctx.createBuffer(1, n, sr);
   const d = buf.getChannelData(0);
-  const a1 = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);  // two one-pole low-passes
-  const aHp = 1 - Math.exp((-2 * Math.PI * 90) / sr);     // and a gentle high-pass
-  let lp1 = 0, lp2 = 0, hp = 0;
-  let pulseT = 1, period = sr / rate, amp = 1;
-  let peak = 0;
+  const phases = Array.from({ length: 14 }, () => Math.random() * Math.PI * 2);
+  const drift = Math.random() * Math.PI * 2;
+  let ph = 0, peak = 0;
   for (let i = 0; i < n; i++) {
-    if (pulseT >= period) {
-      // each pulse lands a little early or late and a little louder or softer
-      pulseT = 0;
-      period = (sr / rate) * (0.9 + Math.random() * 0.2);
-      amp = 0.7 + Math.random() * 0.3;
+    const t = i / sr;
+    ph += (2 * Math.PI * PURR_F0 * (1 + 0.02 * Math.sin(2 * Math.PI * 0.7 * t + drift))) / sr;
+    let v = 0;
+    for (let k = 1; k <= 14; k++) {
+      const f = k * PURR_F0;
+      const g = Math.exp(-(((f - 110) / 90) ** 2)) + 0.25 * Math.exp(-(((f - 30) / 15) ** 2));
+      v += (g / Math.sqrt(k)) * Math.sin(k * ph + phases[k - 1]);
     }
-    const tp = pulseT / sr;
-    const pulse = amp * Math.min(1, tp / 0.004) * Math.exp(-tp / 0.011);
-    pulseT++;
-    lp1 += a1 * (Math.random() * 2 - 1 - lp1);
-    lp2 += a1 * (lp1 - lp2);
-    hp += aHp * (lp2 - hp);
-    // breath envelope: swell in, sustain, taper out
+    // breath envelope: ease in, hold, ease out — no clicks between breaths
     const x = i / n;
-    const breath = Math.sin(Math.PI * Math.min(1, x / 0.18) / 2) * Math.cos(Math.PI * Math.max(0, (x - 0.7) / 0.3) / 2);
-    const v = (lp2 - hp) * pulse * breath;
+    v *= Math.sin((Math.PI * Math.min(1, x / 0.25)) / 2) ** 2 * Math.cos((Math.PI * Math.max(0, (x - 0.6) / 0.4)) / 2) ** 2;
     d[i] = v;
     peak = Math.max(peak, Math.abs(v));
   }
@@ -145,27 +140,39 @@ function setupPurr() {
   purr.bus.gain.value = 0;
   purr.bus.connect(ctx.destination);
   for (let k = 0; k < 3; k++) {
-    purr.out.push(renderBreath({ seconds: 1.0 + Math.random() * 0.35, rate: 23 + Math.random() * 3, cutoff: 380, loud: 1 }));
-    purr.in.push(renderBreath({ seconds: 0.6 + Math.random() * 0.2, rate: 27 + Math.random() * 3, cutoff: 520, loud: 0.5 }));
+    purr.out.push(renderBreath(1.2 + k * 0.12, 1));
+    purr.in.push(renderBreath(0.75 + k * 0.08, 0.55));
   }
+}
+
+function stopQueuedPurr(now) {
+  // cancel breaths that haven't started yet; the one already playing fades with the bus
+  purr.queued = purr.queued.filter(({ src, start }) => {
+    if (start > now) { try { src.stop(); } catch {} return false; }
+    return start + src.buffer.duration > now;
+  });
+  const playing = purr.queued[purr.queued.length - 1];
+  purr.next = playing ? playing.start + playing.src.buffer.duration : 0;
+  purr.exhale = true;
 }
 
 export function setPurr(level) {
   if (!ctx || !purr.bus) return;
   const now = ctx.currentTime;
   const target = muted ? 0 : Math.min(1, Math.max(0, level));
-  // slow smoothing so frame-to-frame changes in pet level never sound like a wobble
   purr.bus.gain.setTargetAtTime(target * 0.6, now, 0.3);
-  if (target < 0.04) { purr.exhale = true; return; } // let the current breath fade out
-  if (purr.next < now) purr.next = now + 0.03;        // (re)start on an out-breath
+  if (target < 0.04) { if (purr.queued.length) stopQueuedPurr(now); return; }
+  if (purr.next < now) purr.next = now + 0.03;
+  // keep at most one breath queued ahead of the one playing: never overlapping, never faster
   while (purr.next - now < 0.3) {
     const list = purr.exhale ? purr.out : purr.in;
     const src = ctx.createBufferSource();
     src.buffer = list[(Math.random() * list.length) | 0];
-    src.playbackRate.value = 0.96 + Math.random() * 0.08;
     src.connect(purr.bus);
     src.start(purr.next);
-    purr.next += src.buffer.duration / src.playbackRate.value + (purr.exhale ? 0.08 : 0.16) + Math.random() * 0.08;
+    purr.queued.push({ src, start: purr.next });
+    src.onended = () => { purr.queued = purr.queued.filter((q) => q.src !== src); };
+    purr.next += src.buffer.duration + (purr.exhale ? 0.12 : 0.22);
     purr.exhale = !purr.exhale;
   }
 }
