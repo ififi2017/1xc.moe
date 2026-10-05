@@ -1,18 +1,5 @@
-/* 寒蝉圆黑体 (Chill Round Gothic, SIL OFL 1.1 — see public/fonts/OFL.txt),
-   subset to the characters the site uses. Regenerate with `npm run fonts`. */
-@font-face {
-  font-family: "1xc Rounded";
-  src: url("/fonts/1xc-rounded-500.woff2") format("woff2");
-  font-weight: 100 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: "1xc Rounded";
-  src: url("/fonts/1xc-rounded-700.woff2") format("woff2");
-  font-weight: 600 900;
-  font-display: swap;
-}
-
+/* 寒蝉圆黑体 (SIL OFL 1.1, public/fonts/OFL.txt) is subset per language into
+   src/fonts.css by `npm run fonts`; :lang() picks the page's own subset. */
 :root {
   --bg1: #fff5f9;
   --bg2: #f3eeff;
@@ -32,7 +19,7 @@
   /* Chinese and kana come from one rounded font that has every character the
      site uses (M PLUS Rounded 1c lacked 嘿/喵/恁/啥…, so lines mixed fonts and
      weights). Fredoka handles Latin; system CJK fonts are only the fallback. */
-  --font-text: "Fredoka", "1xc Rounded", "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-text: "Fredoka", var(--font-cjk, "1xc Rounded zh-CN"), "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
   color-scheme: light;
 }
 
@@ -140,7 +127,7 @@ body { overflow-x: hidden; }
 }
 .round:hover, .pill:hover { transform: scale(1.06) rotate(-4deg); }
 .round:active, .pill:active { transform: scale(0.94); }
-.round:focus-visible, .pill:focus-visible, .menu button:focus-visible, .btn:focus-visible, .scroll-cue:focus-visible {
+.round:focus-visible, .pill:focus-visible, .btn:focus-visible, .scroll-cue:focus-visible {
   outline: 3px solid var(--c);
   outline-offset: 2px;
 }
@@ -168,22 +155,31 @@ body { overflow-x: hidden; }
 .pill-label { color: var(--ink-soft); }
 .pill b { font-weight: 800; }
 
-.dialect { position: relative; }
+.lang { position: relative; }
 .menu {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
   margin: 0;
   padding: 6px;
-  list-style: none;
   border-radius: 18px;
-  min-width: 156px;
-  background: rgba(255, 255, 255, 0.92);
+  min-width: 196px;
+  max-height: calc(100svh - 96px);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.94);
   transform-origin: top right;
   animation: menu-in 0.22s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
 @keyframes menu-in { from { transform: scale(0.85); opacity: 0; } }
-.menu button {
+.menu ul { margin: 0; padding: 0; list-style: none; }
+.menu-heading {
+  margin: 6px 12px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.menu ul + .menu-heading { margin-top: 10px; padding-top: 8px; border-top: 1.5px dashed var(--glass-line); }
+.menu button, .menu a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -196,10 +192,11 @@ body { overflow-x: hidden; }
   font: inherit;
   font-weight: 700;
   font-size: 14px;
+  text-decoration: none;
   cursor: pointer;
   text-align: left;
 }
-.menu button b {
+.menu button b, .menu a b {
   display: inline-grid;
   place-items: center;
   min-width: 34px;
@@ -210,9 +207,43 @@ body { overflow-x: hidden; }
   color: var(--moe);
   font-size: 13px;
 }
-.menu button:hover { background: #fff0f6; }
-.menu button[aria-selected="true"] { background: #ffe3ee; }
-.menu button[aria-selected="true"]::after { content: "♥"; margin-left: auto; color: var(--moe); }
+.menu button:hover, .menu a:hover { background: #fff0f6; }
+.menu button[aria-pressed="true"], .menu a[aria-current="page"] { background: #ffe3ee; }
+.menu button[aria-pressed="true"]::after, .menu a[aria-current="page"]::after { content: "♥"; margin-left: auto; color: var(--moe); }
+.menu button:focus-visible, .menu a:focus-visible { outline: 3px solid var(--c); outline-offset: 2px; }
+
+/* "this page is also in …" — offered, never forced */
+.lang-hint {
+  position: fixed;
+  z-index: 9;
+  top: calc(max(16px, env(safe-area-inset-top)) + 54px);
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 14px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 2px solid var(--glass-line);
+  box-shadow: 0 6px 20px rgba(220, 120, 170, 0.14);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+  font-size: 13px;
+  font-weight: 700;
+  animation: menu-in 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.lang-hint a { color: var(--moe); text-decoration: none; }
+.lang-hint button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  cursor: pointer;
+}
+.lang-hint button:hover { background: #fff0f6; }
 
 /* ---------- hero ---------- */
 .hero {
