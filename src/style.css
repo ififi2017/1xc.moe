@@ -1,3 +1,18 @@
+/* 寒蝉圆黑体 (Chill Round Gothic, SIL OFL 1.1 — see public/fonts/OFL.txt),
+   subset to the characters the site uses. Regenerate with `npm run fonts`. */
+@font-face {
+  font-family: "1xc Rounded";
+  src: url("/fonts/1xc-rounded-500.woff2") format("woff2");
+  font-weight: 100 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "1xc Rounded";
+  src: url("/fonts/1xc-rounded-700.woff2") format("woff2");
+  font-weight: 600 900;
+  font-display: swap;
+}
+
 :root {
   --bg1: #fff5f9;
   --bg2: #f3eeff;
@@ -14,10 +29,10 @@
   --glass: rgba(255, 255, 255, 0.72);
   --glass-line: rgba(255, 170, 200, 0.45);
   --card: rgba(255, 255, 255, 0.78);
-  /* Chinese text always comes from one system CJK font. M PLUS Rounded 1c (a
-     Japanese font) lacked characters like 嘿/喵/恁/啥, so lines mixed two fonts
-     with different weights. Fredoka still handles Latin letters and digits. */
-  --font-text: "Fredoka", "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  /* Chinese and kana come from one rounded font that has every character the
+     site uses (M PLUS Rounded 1c lacked 嘿/喵/恁/啥…, so lines mixed fonts and
+     weights). Fredoka handles Latin; system CJK fonts are only the fallback. */
+  --font-text: "Fredoka", "1xc Rounded", "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
   color-scheme: light;
 }
 
