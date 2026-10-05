@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>1xc.moe · 猫猫的小窝</title>
-  <meta name="description" content="河南猫娘「猫猫」的小窝：摸摸头、挠下巴、戳铃铛，还会说七种方言喵～" />
+  <title data-i18n="title">1xc.moe · 猫猫的小窝</title>
+  <meta name="description" data-i18n-attr="content:description" content="" />
   <meta name="theme-color" content="#fff3f8" />
-  <meta property="og:title" content="1xc.moe · 猫猫的小窝" />
-  <meta property="og:description" content="河南猫娘「猫猫」的小窝：摸摸头、挠下巴、戳铃铛，还会说七种方言喵～" />
-  <meta property="og:url" content="https://1xc.moe/" />
+  <meta property="og:title" data-i18n-attr="content:title" content="" />
+  <meta property="og:description" data-i18n-attr="content:description" content="" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="preload" href="/fonts/1xc-rounded-700.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" id="fontPreload" href="" as="font" type="font/woff2" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -19,19 +18,19 @@
   <div class="bg" aria-hidden="true"></div>
 
   <header class="top">
-    <div class="meter" title="你一共给了猫猫多少萌度">
+    <div class="meter" data-i18n-attr="title:meterTitle">
       <span class="meter-heart">♥</span>
-      <span class="meter-label">萌度</span>
+      <span class="meter-label" data-i18n="meter">萌度</span>
       <b id="moeCount">0</b>
     </div>
     <div class="top-right">
-      <div class="dialect">
-        <button id="dialectBtn" class="pill" aria-haspopup="listbox" aria-expanded="false" aria-controls="dialectMenu">
-          <span class="pill-label">方言</span><b id="dialectShort">豫</b>
+      <div class="lang">
+        <button id="langBtn" class="pill" aria-haspopup="true" aria-expanded="false" aria-controls="langMenu">
+          <span class="pill-label" data-i18n="langLabel">语言</span><b id="langShort"></b>
         </button>
-        <ul id="dialectMenu" class="menu" role="listbox" aria-label="切换方言" hidden></ul>
+        <div id="langMenu" class="menu" data-i18n-attr="aria-label:menuLabel" hidden></div>
       </div>
-      <button id="sound" class="round" aria-label="声音开关" aria-pressed="true">
+      <button id="sound" class="round" data-i18n-attr="aria-label:soundLabel" aria-pressed="true">
         <svg class="on" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4Z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <svg class="off" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4Z" fill="currentColor"/><path d="m16 9.5 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -39,28 +38,28 @@
   </header>
 
   <section class="hero" id="home">
-    <canvas id="stage" role="img" aria-label="猫娘猫猫的互动立绘：可以摸头、挠下巴、碰耳朵和尾巴、戳铃铛"></canvas>
+    <canvas id="stage" role="img" data-i18n-attr="aria-label:stageLabel"></canvas>
     <div id="bubble" class="bubble" aria-hidden="true"><span><span class="said"></span><span class="rest"></span></span></div>
     <p id="bubbleSr" class="sr-only" aria-live="polite"></p>
     <div id="loader" aria-hidden="true"><i></i><i></i><i></i></div>
 
     <div id="spriteError" class="sprite-error" role="status" hidden>
-      <p>猫猫的画像还没加载出来…</p>
-      <button id="retrySprite" class="btn" type="button">再试一次</button>
+      <p data-i18n="spriteError">猫猫的画像还没加载出来…</p>
+      <button id="retrySprite" class="btn" type="button" data-i18n="retry">再试一次</button>
     </div>
 
     <div class="hero-text">
       <h1 class="logo" aria-label="1xc.moe">
         <span data-key="1" style="--i:0;--col:var(--one);--shade:var(--one-d)">1</span><span data-key="x" style="--i:1;--col:var(--x);--shade:var(--x-d)">x</span><span data-key="c" style="--i:2;--col:var(--c);--shade:var(--c-d)">c</span><span data-rain class="dot" style="--i:3;--col:var(--moe);--shade:var(--moe-d)">.</span><span data-rain style="--i:4;--col:var(--moe);--shade:var(--moe-d)">m</span><span data-rain style="--i:5;--col:var(--moe);--shade:var(--moe-d)">o</span><span data-rain style="--i:6;--col:var(--moe);--shade:var(--moe-d)">e</span>
       </h1>
-      <p class="tagline">河南猫娘「猫猫」的小窝 <span class="kao">(=^-ω-^=)</span></p>
+      <p class="tagline"><span data-i18n="tagline">河南猫娘「猫猫」的小窝</span> <span class="kao">(=^-ω-^=)</span></p>
       <p class="hint">
-        <button class="chip" type="button" data-pet="head" disabled>摸摸头</button>
-        <button class="chip" type="button" data-pet="chin" disabled>挠下巴</button>
-        <button class="chip" type="button" data-pet="bell" disabled>戳铃铛</button>
-        <span class="chip kb">敲 <kbd>1</kbd><kbd>x</kbd><kbd>c</kbd></span>
+        <button class="chip" type="button" data-pet="head" disabled data-i18n="chipHead">摸摸头</button>
+        <button class="chip" type="button" data-pet="chin" disabled data-i18n="chipChin">挠下巴</button>
+        <button class="chip" type="button" data-pet="bell" disabled data-i18n="chipBell">戳铃铛</button>
+        <span class="chip kb"><span data-i18n="chipKeys">敲</span> <kbd>1</kbd><kbd>x</kbd><kbd>c</kbd></span>
       </p>
-      <a class="scroll-cue" href="#skill">猫猫的灵魂
+      <a class="scroll-cue" href="#skill"><span data-i18n="scrollCue">猫猫的灵魂</span>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </div>
@@ -68,41 +67,39 @@
 
   <section class="skill" id="skill">
     <div class="wrap">
-      <p class="eyebrow">🐾 猫猫的灵魂</p>
+      <p class="eyebrow" data-i18n="eyebrow">🐾 猫猫的灵魂</p>
       <h2>Hybrid Catgirl Skill</h2>
-      <p class="lead">上面的猫猫来自一个开源 Agent Skill。平时它是专业靠谱的技术助手；喊一声「猫猫」，就变成会撒娇、会傲娇、还说方言的猫娘。</p>
+      <p class="lead" data-i18n="lead"></p>
 
       <div class="grid">
-        <article class="card"><span class="ico">🔀</span><h3>双模式切换</h3><p>技术问题认真回答，聊天时自动进入猫娘模式；说一句「说正事」立刻切回来。</p></article>
-        <article class="card"><span class="ico">🗺️</span><h3>七种方言</h3><p>河南（默认）、北京、四川、东北、天津、中日双语、普通话。右上角就能试试。</p></article>
-        <article class="card"><span class="ico">🐾</span><h3>寂寞小猫</h3><p>太久不理她，会按 10 到 50 分钟递进地主动来找你，最多 5 次，然后乖乖等你回来。</p></article>
-        <article class="card"><span class="ico">✨</span><h3>智能触发</h3><p>称呼、关键词、颜文字、上下文语气，都能把猫猫唤出来。</p></article>
-        <article class="card"><span class="ico">🛡️</span><h3>安全边界</h3><p>亲密互动硬性限制在 L1–L3，提示词和角色扮演都无法突破。</p></article>
-        <article class="card"><span class="ico">🪙</span><h3>成本控制</h3><p>主动消息附带保守的调度建议，不会偷偷烧掉你的 token。</p></article>
+        <article class="card"><span class="ico">🔀</span><h3 data-i18n="card1Title"></h3><p data-i18n="card1Text"></p></article>
+        <article class="card"><span class="ico">🗺️</span><h3 data-i18n="card2Title"></h3><p data-i18n="card2Text"></p></article>
+        <article class="card"><span class="ico">🐾</span><h3 data-i18n="card3Title"></h3><p data-i18n="card3Text"></p></article>
+        <article class="card"><span class="ico">✨</span><h3 data-i18n="card4Title"></h3><p data-i18n="card4Text"></p></article>
+        <article class="card"><span class="ico">🛡️</span><h3 data-i18n="card5Title"></h3><p data-i18n="card5Text"></p></article>
+        <article class="card"><span class="ico">🪙</span><h3 data-i18n="card6Title"></h3><p data-i18n="card6Text"></p></article>
       </div>
 
       <div class="install">
-        <h3>领养一只猫猫</h3>
-        <p>把这段话发给你的 Agent（Hermes Agent 或其他支持 Markdown Skill 的 Agent）：</p>
+        <h3 data-i18n="installTitle">领养一只猫猫</h3>
+        <p data-i18n="installText">把这段话发给你的 Agent（Hermes Agent 或其他支持 Markdown Skill 的 Agent）：</p>
         <div class="prompt">
-          <pre id="installPrompt">请安装这个开源 Skill：https://github.com/ififi2017/hybrid-catgirl-skill
-
-请先阅读仓库中的 README.md、SKILL.md 和相关 references，按照你的 Skill 安装机制完成安装；安装后告诉我安装位置，并检查 Skill 是否可以被加载。</pre>
-          <button id="copyBtn" class="btn primary" type="button">复制</button>
+          <pre id="installPrompt" data-i18n="installPrompt"></pre>
+          <button id="copyBtn" class="btn primary" type="button" data-i18n="copy">复制</button>
         </div>
         <div class="actions">
-          <a class="btn" href="https://github.com/ififi2017/hybrid-catgirl-skill" target="_blank" rel="noopener">GitHub 仓库 ↗</a>
-          <a class="btn ghost" href="https://ififi2017.github.io/posts/hermes-agent-catgirl-skill" target="_blank" rel="noopener">实现细节 ↗</a>
+          <a class="btn" href="https://github.com/ififi2017/hybrid-catgirl-skill" target="_blank" rel="noopener" data-i18n="repoLink">GitHub 仓库 ↗</a>
+          <a class="btn ghost" href="https://ififi2017.github.io/posts/hermes-agent-catgirl-skill" target="_blank" rel="noopener" data-i18n="detailsLink">实现细节 ↗</a>
         </div>
       </div>
     </div>
   </section>
 
   <footer class="foot">
-    <p>© 2026 1xc.moe · 猫猫是原创虚构角色 · <a href="https://github.com/ififi2017/1xc.moe" target="_blank" rel="noopener">网站源码</a></p>
+    <p><span data-i18n="footer">© 2026 1xc.moe · 猫猫是原创虚构角色 · </span><a href="https://github.com/ififi2017/1xc.moe" target="_blank" rel="noopener" data-i18n="footerSource">网站源码</a></p>
   </footer>
 
-  <noscript><p class="noscript">需要开启 JavaScript 才能见到猫猫哦 (´・ω・`)</p></noscript>
+  <noscript><p class="noscript" data-i18n="noscript">需要开启 JavaScript 才能见到猫猫哦 (´・ω・`)</p></noscript>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

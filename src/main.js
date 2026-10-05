@@ -1,7 +1,9 @@
 import './style.css';
+import './fonts.css';
 import { createSpriteStage } from './sprite-stage.js';
 import { SpriteCharacter } from './sprite-character.js';
 import { DIALECTS, LINES } from './lines.js';
+import { LOCALES, MESSAGES, localeByCode, preferredLocale } from './i18n/index.js';
 import * as sfx from './audio.js';
 import { speechPlan, VOICE_STEPS } from './speech.js';
 
@@ -23,12 +25,17 @@ let ready = false;
 let debugControls;
 
 /* ------------------------------------------------------------------ */
-/* dialect & speech                                                    */
+/* language, dialect & speech                                          */
 /* ------------------------------------------------------------------ */
+// the page is pre-rendered per language; <html lang> says which one this is
+const locale = localeByCode(document.documentElement.lang);
+const ui = MESSAGES[locale.code].ui;
+const hasDialects = locale.code === 'zh-CN';
 let dialect = store.get('1xc:dialect', 'henan');
 if (!LINES[dialect]) dialect = 'henan';
+const lines = () => (hasDialects ? LINES[dialect] : MESSAGES[locale.code].lines);
 const line = (key) => {
-  const v = LINES[dialect][key] ?? LINES.henan[key];
+  const v = lines()[key] ?? LINES.henan[key];
   return Array.isArray(v) ? pick(v) : v;
 };
 
@@ -76,33 +83,55 @@ function advanceSpeech(dt) {
   return true;
 }
 
-const dialectBtn = $('#dialectBtn');
-const dialectMenu = $('#dialectMenu');
-function renderDialect() {
-  $('#dialectShort').textContent = DIALECTS.find((d) => d.id === dialect).short;
-  dialectMenu.innerHTML = DIALECTS.map((d) =>
-    `<li><button type="button" role="option" data-id="${d.id}" aria-selected="${d.id === dialect}"><b>${d.short}</b>${d.label}</button></li>`).join('');
+// one menu: languages (links to the pre-rendered pages) and, on the
+// Simplified Chinese page, the dialects underneath
+const langBtn = $('#langBtn');
+const langMenu = $('#langMenu');
+function renderMenu() {
+  $('#langShort').textContent = hasDialects ? DIALECTS.find((d) => d.id === dialect).short : locale.short;
+  const langs = LOCALES.map((l) =>
+    `<li><a href="${l.path}" lang="${l.code}" data-lang="${l.code}"${l.code === locale.code ? ' aria-current="page"' : ''}><b>${l.short}</b>${l.label}</a></li>`).join('');
+  const dialects = hasDialects ? `<p class="menu-heading">${ui.dialectsHeading}</p><ul>${DIALECTS.map((d) =>
+    `<li><button type="button" data-id="${d.id}" aria-pressed="${d.id === dialect}"><b>${d.short}</b>${d.label}</button></li>`).join('')}</ul>` : '';
+  langMenu.innerHTML = `<p class="menu-heading">${ui.languagesHeading}</p><ul>${langs}</ul>${dialects}`;
 }
-function toggleMenu(open = dialectMenu.hidden) {
-  dialectMenu.hidden = !open;
-  dialectBtn.setAttribute('aria-expanded', String(open));
+function toggleMenu(open = langMenu.hidden) {
+  langMenu.hidden = !open;
+  langBtn.setAttribute('aria-expanded', String(open));
 }
-dialectBtn.addEventListener('click', () => toggleMenu());
-dialectMenu.addEventListener('click', (e) => {
+langBtn.addEventListener('click', () => toggleMenu());
+langMenu.addEventListener('click', (e) => {
+  const link = e.target.closest('a[data-lang]');
+  if (link) { store.set('1xc:lang', link.dataset.lang); return; }
   const b = e.target.closest('button[data-id]');
   if (!b) return;
   dialect = b.dataset.id;
   store.set('1xc:dialect', dialect);
-  renderDialect();
+  renderMenu();
   toggleMenu(false);
   activity();
   cat.wave();
   say(line('switch'), 1.9, true);
   sfx.meow(rand(0.95, 1.1));
 });
-document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.dialect')) toggleMenu(false); });
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.lang')) toggleMenu(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false); });
-renderDialect();
+renderMenu();
+
+// If the browser prefers another language we have, offer it (never redirect:
+// search engines and shared links should land on the page they asked for).
+(() => {
+  if (store.get('1xc:lang', null)) return;
+  const want = preferredLocale(navigator.languages ?? [navigator.language]);
+  if (!want || want === locale.code) return;
+  const target = localeByCode(want);
+  const hint = document.createElement('div');
+  hint.className = 'lang-hint';
+  hint.innerHTML = `<a href="${target.path}" lang="${target.code}">${MESSAGES[want].ui.langHint} →</a><button type="button" aria-label="×">×</button>`;
+  hint.querySelector('a').addEventListener('click', () => store.set('1xc:lang', want));
+  hint.querySelector('button').addEventListener('click', () => { store.set('1xc:lang', locale.code); hint.remove(); });
+  $('.top').after(hint);
+})();
 
 /* ------------------------------------------------------------------ */
 /* sound & moe meter                                                   */
@@ -157,7 +186,7 @@ function tickLonely(dt) {
   if (quiet < LONELY_AT[lonely]) return;
   lonely++;
   cat.setLonely(lonely);
-  say((LINES[dialect].lonely ?? LINES.henan.lonely)[lonely - 1], 3.4);
+  say((lines().lonely ?? LINES.henan.lonely)[lonely - 1], 3.4);
   if (lonely === 1) cat.poke(0.5);
   if (lonely < 5) sfx.meow(lonely >= 3 ? 0.82 : 1);
 }
@@ -171,10 +200,10 @@ const BASE_TITLE = document.title;
 const TITLE_STEP = 20;
 let titleTimer = 0;
 function awayTitle() {
-  const lines = LINES[dialect].lonely ?? LINES.henan.lonely;
+  const lonelyLines = lines().lonely ?? LINES.henan.lonely;
   const away = (performance.now() - hiddenAt) / 1000;
-  const stage = Math.min(lines.length - 1, Math.max(lonely - 1, Math.floor(away / TITLE_STEP)));
-  document.title = `${stage === lines.length - 1 ? '💤' : '🐾'} ${lines[stage]}`;
+  const stage = Math.min(lonelyLines.length - 1, Math.max(lonely - 1, Math.floor(away / TITLE_STEP)));
+  document.title = `${stage === lonelyLines.length - 1 ? '💤' : '🐾'} ${lonelyLines[stage]}`;
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -347,13 +376,13 @@ $('#copyBtn').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
   try {
     await navigator.clipboard.writeText($('#installPrompt').textContent);
-    btn.textContent = '已复制 ✓';
+    btn.textContent = ui.copied;
   } catch {
     getSelection().selectAllChildren($('#installPrompt'));
-    btn.textContent = '请手动复制';
+    btn.textContent = ui.copyManual;
   }
   sfx.ding();
-  setTimeout(() => { btn.textContent = '复制'; }, 1800);
+  setTimeout(() => { btn.textContent = ui.copy; }, 1800);
 });
 
 /* ------------------------------------------------------------------ */
@@ -430,7 +459,7 @@ async function loadCharacter() {
     stage.preload();
     document.querySelectorAll('[data-pet]').forEach((button) => { button.disabled = false; });
   } catch (cause) {
-    console.error('立绘加载失败', cause);
+    console.error(ui.spriteFail, cause);
     document.body.classList.add('load-error');
     error.hidden = false;
   }

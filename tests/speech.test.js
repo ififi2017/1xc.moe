@@ -10,6 +10,17 @@ test('one voice blip per spoken character; punctuation and kaomoji are silent', 
   assert.equal(speechPlan('ご主人様～お帰りにゃ').filter((s) => s.voiced).length, 9);
 });
 
+test('English blips per syllable, not per letter; Korean per syllable block', () => {
+  const voiced = (t) => speechPlan(t).filter((s) => s.voiced).length;
+  assert.equal(voiced('Nya'), 1);
+  assert.equal(voiced('Welcome'), 3);
+  assert.equal(voiced("don't"), 1);
+  assert.equal(voiced('주인님 냥'), 4);
+  const q = speechPlan('Did you forget me?');
+  assert.equal(q.filter((s) => s.rising).length, 1);
+  assert.equal(q.findLast((s) => s.voiced).rising, true);
+});
+
 test('questions lift the last syllable and full stops pause longer than commas', () => {
   const plan = speechPlan('好吗？嗯，好。');
   assert.equal(plan.find((s) => s.ch === '吗').rising, true);
