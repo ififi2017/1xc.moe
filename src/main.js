@@ -309,7 +309,7 @@ function heartRain() {
 /* ------------------------------------------------------------------ */
 const SPAM_TAPS = 10;        // this many taps…
 const SPAM_WINDOW = 2500;    // …within this many ms is one offence
-const GENSHIN = 'https://github.com/gamemcu/www-genshin';
+const GENSHIN = `/genshin/?lang=${locale.code}`; // our own door scene, then the official site
 let taps = [];
 let strikes = 0;
 
