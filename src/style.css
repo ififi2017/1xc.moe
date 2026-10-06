@@ -614,3 +614,15 @@ button.chip:disabled { opacity: 0.5; cursor: wait; }
   #stage, .bubble > span { transition: none; }
   #loader i, .logo span.boing, .meter b.pop { animation: none; }
 }
+
+/* 狂点 one time too many: the page fades to white, then 原神，启动 */
+.whiteout {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: auto;
+}
+.whiteout.on { opacity: 1; }

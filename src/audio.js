@@ -30,6 +30,21 @@ for (const type of ['touchend', 'click', 'keydown']) {
   window.addEventListener(type, unlock, { passive: true, capture: true });
 }
 
+// With a 'playback' session, iOS keeps a running context alive in the background
+// and shows it in the Dynamic Island / on the lock screen. Close the context as
+// soon as the page is hidden; a new one is made on return (it starts right away
+// where the browser allows it, otherwise on the next tap).
+function release() {
+  if (!ctx) return;
+  const old = ctx;
+  ctx = null;
+  Object.assign(purr, { bus: null, next: 0, exhale: true, queued: [] });
+  old.close().catch(() => {});
+  try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) release(); else unlock(); });
+window.addEventListener('pagehide', release);
+
 const ready = () => ctx && !muted;
 
 function env(g, t, peak, attack, dur) {
@@ -141,6 +156,7 @@ function setupPurr() {
   purr.bus = ctx.createGain();
   purr.bus.gain.value = 0;
   purr.bus.connect(ctx.destination);
+  if (purr.out.length) return; // buffers outlive the context they were made for
   for (let k = 0; k < 3; k++) {
     purr.out.push(renderBreath(1.2 + k * 0.12, 1));
     purr.in.push(renderBreath(0.75 + k * 0.08, 0.55));

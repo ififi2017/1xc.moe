@@ -27,6 +27,7 @@ test('every language (and every zh-CN dialect) has a full set of lines', () => {
     const missing = LINE_KEYS.filter((k) => !lines?.[k] || (Array.isArray(lines[k]) && !lines[k].length));
     assert.deepEqual(missing, [], `${name} is missing lines: ${missing.join(', ')}`);
     assert.equal(lines.lonely.length, 5, `${name}: 寂寞小猫 needs 5 stages`);
+    assert.equal(lines.warn.length, 3, `${name}: 狂点 needs 3 warnings`);
   }
 });
 
