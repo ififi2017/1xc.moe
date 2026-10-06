@@ -47,8 +47,9 @@ const bubbleSr = $('#bubbleSr');
 
 let speech = null;
 let sayT = 0;
+let sulkUntil = 0; // while she's telling you off, other chatter waits
 function say(text, dur = 1.9, force = false) {
-  if (!force && performance.now() - wokeAt < 1200) return;
+  if (!force && (performance.now() - wokeAt < 1200 || performance.now() < sulkUntil)) return;
   const plan = speechPlan(text);
   speech = { plan, i: 0, wait: 0.06, said: '', syllable: 0 };
   bubbleSaid.textContent = '';
@@ -248,6 +249,7 @@ function react(zone, side) {
 
 function petTick(zone) {
   activity();
+  if (performance.now() < sulkUntil) return;
   cat.petTick();
   // continuous stroking fires many ticks a second; keep hearts and moe at a gentle pace
   if (heartCooldown <= 0) {
@@ -261,27 +263,90 @@ function petTick(zone) {
   }
 }
 
+// One easter-egg show at a time: 1xc already ends in a heart rain, so a rain
+// (or another 1xc) asked for while a show is running is ignored instead of
+// restarting the pose and talking over the line.
+let showUntil = 0;
+function startShow(seconds) {
+  const now = performance.now();
+  if (now < showUntil || now < sulkUntil) return false;
+  showUntil = now + seconds * 1000;
+  return true;
+}
+
 function celebrate() {
   activity();
+  if (!startShow(3.4)) return;
   cat.celebrate();
   say(line('celebrate'), 2.4);
   sfx.meow(1.15);
   setTimeout(() => sfx.ding(), 250);
   stage.burst(stage.headTop(), 16);
-  setTimeout(heartRain, 500);
+  setTimeout(rainHearts, 500);
   addMoe(10);
 }
 
-function heartRain() {
+function rainHearts() {
   for (let i = 0; i < 40; i++) {
     setTimeout(() => {
       stage.spawn('heart', { x: rand(0, stage.width), y: rand(50, 120) },
         { x: rand(-15, 15), y: rand(25, 60) }, { life: 4, size: rand(14, 26), gravity: 15 });
     }, i * 55);
   }
+}
+
+function heartRain() {
+  activity();
+  if (!startShow(2.6)) return;
+  rainHearts();
   cat.celebrate();
   setTimeout(() => say(line('rain')), 400);
   addMoe(5);
+}
+
+/* ------------------------------------------------------------------ */
+/* 狂点: three warnings, then 原神，启动                                 */
+/* ------------------------------------------------------------------ */
+const SPAM_TAPS = 10;        // this many taps…
+const SPAM_WINDOW = 2500;    // …within this many ms is one offence
+const GENSHIN = `/genshin/?lang=${locale.code}`; // our own door scene, then the official site
+let taps = [];
+let strikes = 0;
+
+// Call on every tap; true means she's too cross to react to it.
+function spamGuard() {
+  if (strikes > 3) return true;
+  const now = performance.now();
+  taps = taps.filter((t) => now - t < SPAM_WINDOW);
+  taps.push(now);
+  if (taps.length >= SPAM_TAPS) {
+    taps = [];
+    strike();
+    return true;
+  }
+  return now < sulkUntil;
+}
+
+function strike() {
+  strikes++;
+  if (strikes > 3) return genshinStart();
+  sulkUntil = performance.now() + 2800;
+  cat.setExpr('pout', 2.8);
+  cat.playMotion('shake');
+  cat.poke(1);
+  say((lines().warn ?? LINES.henan.warn)[strikes - 1], 2.8, true);
+  sfx.meow(0.9 - strikes * 0.05);
+}
+
+function genshinStart() {
+  sulkUntil = Infinity;
+  say(line('bye'), 3, true);
+  sfx.meow(0.75);
+  const white = document.createElement('div');
+  white.className = 'whiteout';
+  document.body.append(white);
+  setTimeout(() => white.classList.add('on'), 900);
+  setTimeout(() => location.assign(GENSHIN), 1900);
 }
 
 let seq = '';
@@ -326,8 +391,20 @@ window.addEventListener('pointermove', (e) => {
 }, { passive: true });
 canvas.addEventListener('pointerleave', () => { pointerSeen = false; petAccum = 0; });
 
+// The canvas lets vertical swipes scroll the page (touch-action: pan-y), but a
+// swipe that starts on her head, chin or ears is a pat and mustn't scroll.
+let petTouch = false;
+canvas.addEventListener('touchstart', (e) => {
+  petTouch = false;
+  if (!ready || e.touches.length !== 1) return;
+  setPointer(e.touches[0]);
+  const z = zoneAt();
+  if (z && ['head', 'chin', 'ear'].includes(z.zone)) { petTouch = true; e.preventDefault(); }
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => { if (petTouch && e.cancelable) e.preventDefault(); }, { passive: false });
+
 canvas.addEventListener('pointerdown', (e) => {
-  if (!ready) return;
+  if (!ready || spamGuard()) return;
   setPointer(e);
   const z = zoneAt();
   if (z) return react(z.zone, z.side);
@@ -342,7 +419,7 @@ canvas.addEventListener('pointerdown', (e) => {
 // to locate a small bell or chin in the artwork.
 document.querySelectorAll('[data-pet]').forEach((button) => {
   button.addEventListener('click', () => {
-    if (!ready) return;
+    if (!ready || spamGuard()) return;
     const zone = button.dataset.pet;
     if (zone === 'bell') react(zone); else petTick(zone);
   });
@@ -367,8 +444,9 @@ document.querySelectorAll('.logo span').forEach((el) => {
     el.classList.remove('boing');
     void el.offsetWidth;
     el.classList.add('boing');
+    if (spamGuard()) return;
     if (el.dataset.key) { cat.poke(0.8, false); sfx.blip(rand(620, 700)); feed(el.dataset.key); activity(); }
-    else { activity(); heartRain(); }
+    else heartRain();
   });
 });
 
@@ -473,6 +551,7 @@ if (import.meta.env.DEV) {
     zoneAtClient(x, y) { setPointer({ clientX: x, clientY: y }); return zoneAt(); },
     react, petTick,
     skipQuiet(sec) { quiet += sec; },
+    strikes: () => strikes,
     state: () => ({ ready, sprite: cat.frame, loaded: stage.loaded, lonely, quiet: +quiet.toFixed(1), dialect, sayT: +sayT.toFixed(2), text: bubbleSr.textContent }),
   };
   if (new URLSearchParams(location.search).has('sprite-test')) {

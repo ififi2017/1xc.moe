@@ -62,5 +62,7 @@ export default {
     rain: 'So many hearts! Love you, nya💕',
     meow: ['Nya~', 'Nyan?'],
     switch: 'English mode — nice to meet you, nya~',
+    warn: ["Stop clicking so fast! I'm getting dizzy, nya! (｡•́︿•̀｡)", "Again!? I'm getting really mad, nya! (╬•̀へ•́)", "Final warning! One more time and you're out, nya!"],
+    bye: 'You asked for it! Genshin Impact, start — nya!',
   },
 };

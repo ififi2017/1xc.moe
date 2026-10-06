@@ -24,6 +24,7 @@ function i18nPages() {
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
+        if (ctx.path?.startsWith('/genshin/')) return html; // standalone page, not part of the i18n set
         return localizeHtml(html, localeForPath(ctx.path ?? '/')?.code ?? DEFAULT_LOCALE);
       },
     },
@@ -39,4 +40,9 @@ function i18nPages() {
 
 export default defineConfig({
   plugins: [i18nPages()],
+  build: {
+    rollupOptions: {
+      input: { main: 'index.html', genshin: 'genshin/index.html' },
+    },
+  },
 });

@@ -18,7 +18,8 @@ const SCRIPT_CHARS = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Sc
 const strings = (value) => (typeof value === 'string' ? [value] : Object.values(value ?? {}).flatMap(strings));
 
 function codeSymbols() {
-  const files = readdirSync(join(ROOT, 'src')).filter((f) => /\.(js|css)$/.test(f)).map((f) => join(ROOT, 'src', f));
+  // genshin.* is the standalone door page, which is set in system serif fonts
+  const files = readdirSync(join(ROOT, 'src')).filter((f) => /\.(js|css)$/.test(f) && !f.startsWith('genshin.')).map((f) => join(ROOT, 'src', f));
   let text = '';
   for (const file of files) {
     text += readFileSync(file, 'utf8')
