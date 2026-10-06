@@ -105,7 +105,7 @@ body { font-family: var(--serif); color: var(--ink); -webkit-tap-highlight-color
   display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;
 }
 .title {
-  font-weight: 600; letter-spacing: 0.22em; text-indent: 0.22em; line-height: 1.25;
+  font-weight: 600; letter-spacing: 0.22em; text-indent: 0.22em; line-height: 1.25; white-space: nowrap;
   font-size: clamp(26px, 6vmin, 56px);
   background: linear-gradient(90deg, #6f6148, #b08a3e 40%, #f3dc9e 50%, #b08a3e 60%, #6f6148);
   background-size: 250% 100%;
@@ -116,8 +116,8 @@ body { font-family: var(--serif); color: var(--ink); -webkit-tap-highlight-color
   animation: shine 3.4s linear 2.4s infinite;
 }
 :lang(en) .title { letter-spacing: 0.08em; text-indent: 0.08em; font-size: clamp(24px, 6.4vw, 52px); }
-.sub { font-size: clamp(13px, 2.2vmin, 18px); letter-spacing: 0.18em; opacity: 0; transition: opacity 1s ease 2.8s; }
-.skip { position: absolute; left: 0; right: 0; text-align: center; letter-spacing: 0.18em; opacity: 0; }
+.sub { white-space: nowrap; font-size: clamp(13px, 2.2vmin, 18px); letter-spacing: 0.18em; text-indent: 0.18em; opacity: 0; transition: opacity 1s ease 2.8s; }
+.skip { position: absolute; left: 0; right: 0; text-align: center; letter-spacing: 0.18em; text-indent: 0.18em; opacity: 0; }
 .skip { bottom: max(56px, 9vh); font-size: 13px; color: #a0957f; transition: opacity 1s ease 3.6s; }
 .go .title { opacity: 1; transform: none; }
 .go .sub { opacity: 0.85; }
@@ -128,7 +128,6 @@ body { font-family: var(--serif); color: var(--ink); -webkit-tap-highlight-color
   position: absolute; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom));
   text-align: center; font: 11px/1.5 system-ui, sans-serif; color: #a8a090;
 }
-.credit a { color: inherit; }
 
 /* the light behind the door swallows the screen right before we leave */
 .flash {
