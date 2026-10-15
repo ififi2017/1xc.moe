@@ -1,6 +1,14 @@
 // 한국어. 猫猫는 「마오마오」, 말끝에 「냥」.
 export default {
   ui: {
+    catLabel: "고양이에게 하트 부탁하기",
+    catAlt: "흰색과 보라색 머리, 금빛 눈의 픽셀 고양이",
+    catHint: "고양이를 눌러 하트를 받아 봐요",
+    catHeart: "하트 줄게냥♡",
+    catAdopted: "집에 데려가 줘냥♡",
+    catLoading: "고양이가 준비 중이에요…",
+    catRetry: "조금 뒤에 다시 눌러 줘냥",
+
     title: '1xc.moe · 마오마오의 아늑한 집',
     description: '고양이 소녀 마오마오가 사는 곳: 머리 쓰담쓰담, 턱 긁기, 방울 딸랑~ 말을 걸면 냥 하고 대답해 줘요',
     meterTitle: '마오마오에게 준 모에 포인트',

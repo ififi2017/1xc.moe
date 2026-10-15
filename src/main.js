@@ -6,6 +6,7 @@ import { DIALECTS, LINES } from './lines.js';
 import { LOCALES, MESSAGES, localeByCode, preferredLocale } from './i18n/index.js';
 import * as sfx from './audio.js';
 import { speechPlan, VOICE_STEPS } from './speech.js';
+import { createAdoptionCat } from './adoption-cat.js';
 
 const $ = (s) => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -450,11 +451,13 @@ document.querySelectorAll('.logo span').forEach((el) => {
   });
 });
 
+const adoptionCat = createAdoptionCat($('#adoptionCat'), ui);
 $('#copyBtn').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
   try {
     await navigator.clipboard.writeText($('#installPrompt').textContent);
     btn.textContent = ui.copied;
+    void adoptionCat.play(ui.catAdopted);
   } catch {
     getSelection().selectAllChildren($('#installPrompt'));
     btn.textContent = ui.copyManual;

@@ -1,6 +1,14 @@
 // English. 猫猫 is "Maomao"; she ends lines with a soft "nya".
 export default {
   ui: {
+    catLabel: "Ask kitty for a heart",
+    catAlt: "Pixel kitty with white and lavender hair and golden eyes",
+    catHint: "Tap kitty for a little heart",
+    catHeart: "A heart for you, meow♡",
+    catAdopted: "Take me home, meow♡",
+    catLoading: "Kitty is getting ready…",
+    catRetry: "Try tapping kitty again in a moment",
+
     title: "1xc.moe · Maomao's Cozy Corner",
     description: "Meet Maomao, the catgirl who lives here: pat her head, scratch her chin, jingle her bell — talk to her and she'll answer, nya~",
     meterTitle: "How much moe you've given Maomao",

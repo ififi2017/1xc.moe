@@ -1,6 +1,14 @@
 // 简体中文。台词按方言放在 src/lines.js。
 export default {
   ui: {
+    catLabel: "让猫猫比心",
+    catAlt: "白发紫梢、金眼睛的像素猫猫",
+    catHint: "戳戳猫猫，送你一颗心",
+    catHeart: "给你一颗心喵♡",
+    catAdopted: "带俺回家喵♡",
+    catLoading: "猫猫准备中…",
+    catRetry: "猫猫准备好了再戳戳喵",
+
     title: '1xc.moe · 猫猫的小窝',
     description: '河南猫娘「猫猫」的小窝：摸摸头、挠下巴、戳铃铛，还会说好几种方言喵～',
     meterTitle: '你一共给了猫猫多少萌度',
