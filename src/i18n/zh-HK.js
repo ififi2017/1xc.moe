@@ -1,6 +1,14 @@
 // 繁體中文（香港）：廣東話口語。
 export default {
   ui: {
+    catLabel: "叫貓貓比心",
+    catAlt: "白髮紫梢、金眼睛嘅像素貓貓",
+    catHint: "撳吓貓貓，送你一粒心",
+    catHeart: "送你一粒心喵♡",
+    catAdopted: "帶我返屋企喵♡",
+    catLoading: "貓貓準備緊…",
+    catRetry: "等貓貓準備好再撳喵",
+
     title: '1xc.moe · 貓貓嘅小竇',
     description: '貓娘「貓貓」嘅小竇：摸摸頭、抓下巴、篤鈴鐺，同佢講嘢仲會喵喵聲應你㗎～',
     meterTitle: '你總共俾咗貓貓幾多萌度',

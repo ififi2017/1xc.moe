@@ -1,0 +1,49 @@
+{
+  "design": {
+    "tool": "built-in image_gen",
+    "concept": {
+      "prompt": "Create one polished 2D chibi full-body standing character design reference, transparent background. Original white/lavender catgirl mascot 1xc. This is a NEW cohesive full-body design, not a head pasted onto a body. Beautiful balanced 2.5-head-tall chibi proportions, rounded oversized head but compact naturally connected neck and shoulders, short cute torso, short legs, soft rounded silhouette. Fluffy layered white bob haircut fading to lavender curled tips, wide white cat ears pink interiors, curled ahoge, white/pink paw hairclip on viewer right, large warm golden amber eyes with gentle friendly expression, small catlike smile and blush. Black choker with small gold bell. Fully opaque modest lavender ruffled dress under an oversized cream cable-knit cardigan with dropped shoulders and long puffy sleeves, pink paw motif on sleeves. Tiny hands visible below ribbed cuffs, held loosely together in front at waist in a shy relaxed pose. Cream slouchy knee socks with little lavender bows and rounded cat-face slippers. Fluffy white tail curves up on viewer right, graceful wide curve and lavender ribbon, attached plausibly behind hip. Front three-quarter very slight angle, entire body from ahoge to shoes within frame with margin, no crop. Sophisticated clean anime chibi illustration, charming game character key art. Neat dark muted plum linework of consistent weight, carefully designed big hair locks and knit folds, simple cel shading, ivory/lavender/pale pink palette, golden eyes. Clearly defined sleeve/hand anatomy, natural shoulder-to-head connection, legs not long or thin, no oversized isolated floating head, no stiff mannequin stance. Smooth 2D illustration NOT pixel art NOT 3D. No text, labels, floor, props, background, extra views or characters. Intended as design guide for subsequently hand-redrawn pixel animation.",
+      "output": "standing-concept-v3.png"
+    },
+    "pixelStyle": {
+      "prompt": "Use case: style-transfer. Reference: attached standing-concept-v3.png is the design and pose reference. REDRAW this character as a beautiful professionally hand-pixelled videogame sprite, NOT a photo/illustration with a pixelation filter. Keep exactly her charming full-body standing pose with hands together at waist, cohesive head/body proportions, slight head tilt, fluffy white-to-lavender bob, amber eyes, paw clip, bell choker, oversized cream cardigan with pink paw sleeves, lilac ruffled dress, slouchy socks, cat slippers, large fluffy curved white tail with lavender bow on viewer right. Entire body visible with safe margins. True hard square pixel edges everywhere, thoughtfully placed staircase contours, no antialiasing, no soft gradients, no sketch strokes. Clearly visible discrete pixel clusters, approximately 160x240 logical pixel detail displayed enlarged, limited 32-color palette, 1-2 logical-pixel dark plum outline, deliberate flat clusters for hair highlights and lavender shadows, legible amber iris highlights, simplified but elegant fabric folds. Prioritize face appeal, naturally connected head/neck/shoulders, beautiful fluffy hair, soft puffy cuffs. Redesign microdetail into large pixel clusters rather than preserving every line. Transparent background, remove ALL gray/black backdrop and glow from input; no checkerboard, ground, shadow, text or extra objects. Deliver a single attractive finished sprite.",
+      "input": "standing-concept-v3.png",
+      "output": "standing-pixel-concept-v3.png"
+    },
+    "status": "AI-generated design and pixel-style draft; not a verified native 256px sprite or animation."
+  },
+  "poses": {
+    "tool": "built-in image_gen",
+    "reference": "../standing-pixel-concept-v3.png",
+    "heart": {
+      "prompt": "Use case: precise-object-edit. Edit this exact pixel-art catgirl sprite into ONE keyframe of a two-handed heart gesture. CRITICAL: preserve original canvas dimensions, character position and scale, head, face, eyes, all hair, ears, legs, socks, shoes, skirt hem and tail pixel-for-pixel as far as possible. Change ONLY arms, oversized sleeves and tiny hands. Lift both bent forearms so the two hands meet in front of her upper chest just BELOW the gold choker bell (not covering the face). Expose small delicate hands from the ribbed cream cuffs; curve BOTH index fingers together into the upper two lobes of a heart, and join both thumb tips to form the bottom point. The hands must visibly make a small heart-shaped empty opening, with lavender dress visible through it. Puffy cream sleeves with pink paw patches support this adorable gesture. Pose symmetric but naturally aligned to her slight body tilt. Reveal the dress where the lowered sleeves previously were; keep same opaque lavender outfit. Keep same pixel-art style, exact colors, clean square stepped edges, discrete pixel clusters. No extra fingers, no third hand, no floating heart or text yet, no new props. Transparent background, no glow. One full-body sprite ONLY. This is an animation keyframe that must align precisely to the input unchanged body; do not redesign the character.",
+      "output": "heart-keyframe-source.png"
+    },
+    "raise": {
+      "prompt": "Use case: precise-object-edit. This exact image is a heart-gesture animation keyframe. Create ONE intermediate keyframe with hands LOWERED by about 130 source pixels from their current chest position, placed in front of the middle abdomen, with a gap of about 50 source pixels between the fingertips. Elbows still bent, hands relaxed and beginning to curve inward preparing to make a heart, small hands visible from cream ribbed sleeves. Repose only forearms, sleeves and hands; restore the lavender dress behind them. MUST KEEP the head, facial expression, hair, legs, skirt hem, feet, tail, overall scale, canvas size, character coordinates and all accessories absolutely identical. Same pixel style, palette, clean stepped edges, no outlines doubled, no glow, no background, no text, no props. One full-body sprite with transparent background. Animation alignment is critical. Do not move the character or reframe.",
+      "input": "heart-keyframe-source.png",
+      "output": "raise-keyframe-source.png"
+    },
+    "near": {
+      "prompt": "Precise-object-edit for animation: keep this image EXACTLY aligned, identical head, face, hair, body position, legs, tail, colors and pixel style. Modify ONLY the arms and hands into an intermediate step just before completing the heart: lower the current joined hands by 65 source-image pixels, separate their fingertips by just 15 pixels, maintain curved index fingers and thumbs nearly making a heart. Hands centered in front of upper abdomen; puffed sleeves change minimally to follow. Everything outside sleeves/hands and newly uncovered lavender dress unchanged. No effects, no floating heart, no text. Full sprite, transparent background, same canvas dimensions.",
+      "input": "heart-keyframe-source.png",
+      "output": "near-keyframe-source.png"
+    },
+    "assembly": "Aseprite 1.3.18.6-dev compiled from official v1.3.18.6 source; make-heart.lua masks/composites poses and draws pixel hearts. Native generated source resolution 1024x1536 preserved, preview exported at half size."
+  },
+  "web": {
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "quality": 90,
+    "alphaQuality": 100,
+    "frames": {
+      "idle.webp": "check-01.png",
+      "raise.webp": "check-02.png",
+      "near.webp": "check-03.png",
+      "heart.webp": "check-04.png"
+    },
+    "note": "Source filenames identify local artwork archives; only the four WebP frames ship with the website."
+  }
+}

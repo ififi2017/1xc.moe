@@ -1,6 +1,14 @@
 // 繁體中文（台灣）：台灣口語，齁、啦、欸、超～
 export default {
   ui: {
+    catLabel: "讓貓貓比心",
+    catAlt: "白髮紫梢、金眼睛的像素貓貓",
+    catHint: "戳戳貓貓，送你一顆心",
+    catHeart: "送你一顆心喵♡",
+    catAdopted: "帶我回家喵♡",
+    catLoading: "貓貓準備中…",
+    catRetry: "等貓貓準備好再戳戳喵",
+
     title: '1xc.moe · 貓貓的小窩',
     description: '貓娘「貓貓」的小窩：摸摸頭、搔下巴、戳鈴鐺，跟她說話還會喵喵回你喔～',
     meterTitle: '你總共給了貓貓多少萌度',
